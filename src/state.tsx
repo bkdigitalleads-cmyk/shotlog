@@ -16,7 +16,7 @@ export interface Settings {
   weightGoal: number | null;
   /** Grams a day, set by the person; null until they set one. No recommended targets. */
   proteinGoal: number | null;
-  /** mL (kg) or fl oz (lb) a day; null until set. */
+  /** mL a day (shown in fl oz with lb); null until set. */
   waterGoal: number | null;
   /** Shot reminders on (asked after the first saved shot). */
   reminders: boolean;

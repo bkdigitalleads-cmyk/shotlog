@@ -89,7 +89,7 @@ export interface FeelingEntry {
   createdAt: number;
 }
 
-/** One day's protein and water counters. Water in mL or fl oz, following the weight unit. */
+/** One day's protein (g) and water (mL; shown in fl oz with lb) counters. */
 export interface Intake {
   day: string;
   protein: number;

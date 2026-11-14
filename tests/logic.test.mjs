@@ -15,6 +15,7 @@ const T = await import('../src/sites.ts');
 const G = await import('../src/gates.ts');
 const O = await import('../src/offer.ts');
 const F = await import('../src/flow.ts');
+const I = await import('../src/insights.ts');
 
 /** Local time on a day: at('2026-11-14', 9, 30). */
 const at = (day, h = 12, m = 0) => D.atTime(day, h, m);
@@ -215,4 +216,85 @@ test('rating guard: later day, not in onboarding, one per launch, not after a pa
   assert.equal(F.reviewAllowed({ ...ok, triggerUsed: true }), false);
   assert.equal(F.secondShotMet(1), false);
   assert.equal(F.secondShotMet(2), true);
+});
+
+// ---------- weight ----------
+
+const weight = (day, value, o = {}) => ({ id: nextId++, at: at(day, o.h ?? 8), value, unit: o.unit ?? 'lb', waist: null, createdAt: 0 });
+
+test('weights: one point per day (the average), units converted, a weekly change from the best-fit line', () => {
+  const ws = [weight('2026-11-02', 200), weight('2026-11-02', 201, { h: 20 }), weight('2026-11-09', 198), weight('2026-11-16', 196.5)];
+  const pts = I.dailyWeights(ws, 'lb');
+  assert.deepEqual(pts.map((p) => p.day), ['2026-11-02', '2026-11-09', '2026-11-16']);
+  assert.equal(pts[0].value, 200.5);
+  // Best fit through (0, 200.5), (7, 198), (14, 196.5): -2 lb a week.
+  assert.equal(I.round1(I.weeklyChange(pts)), -2);
+  // Kilograms in, pounds out.
+  assert.equal(I.round1(I.dailyWeights([weight('2026-11-02', 90, { unit: 'kg' })], 'lb')[0].value), 198.4);
+  assert.equal(I.round1(I.convertWeight(198.4, 'lb', 'kg')), 90);
+  // Under a week apart: too short to say per week.
+  assert.equal(I.weeklyChange(pts.slice(0, 1)), null);
+  assert.equal(I.weeklyChange([{ day: '2026-11-02', value: 200 }, { day: '2026-11-06', value: 199 }]), null);
+  assert.equal(I.signed1(-2.04), '-2.0');
+  assert.equal(I.signed1(1.25), '+1.3');
+  assert.equal(I.fmt1(182), '182.0');
+  assert.deepEqual(I.inLastDays(pts, 7, '2026-11-16').map((p) => p.day), ['2026-11-16']);
+  assert.deepEqual(I.inLastDays(pts, 8, '2026-11-16').map((p) => p.day), ['2026-11-09', '2026-11-16']);
+});
+
+test('change since the first shot: from the weight on or before that day, else the first after it', () => {
+  const pts = [
+    { day: '2026-10-20', value: 210 },
+    { day: '2026-10-28', value: 208 },
+    { day: '2026-11-04', value: 205 },
+    { day: '2026-11-14', value: 201.5 },
+  ];
+  const shots = [shot('2026-11-12'), shot('2026-10-29'), shot('2026-11-05')];
+  assert.deepEqual(I.changeSinceFirstShot(pts, shots), { from: 208, fromDay: '2026-10-28', to: 201.5, toDay: '2026-11-14', change: -6.5 });
+  // No weight before the first shot: the first one after it.
+  assert.equal(I.changeSinceFirstShot(pts.slice(2), shots).fromDay, '2026-11-04');
+  assert.equal(I.changeSinceFirstShot(pts, []), null);
+  assert.equal(I.changeSinceFirstShot(pts.slice(3), shots), null); // one day only
+});
+
+// ---------- how I feel ----------
+
+const feel = (day, kind, h = 12, level = 'mild') => ({ id: nextId++, at: at(day, h), kind, level, note: '', createdAt: 0 });
+
+test('side effects by days since the last shot: counts per day after, 7+ together, nothing before the first shot', () => {
+  const shots = [shot('2026-11-05', { h: 20 }), shot('2026-10-29', { h: 20 })];
+  const feelings = [
+    feel('2026-10-28', 'nausea'), // before the first shot
+    feel('2026-10-29', 'nausea', 21), // day of the shot, after it
+    feel('2026-10-30', 'nausea'), // 1 day after
+    feel('2026-10-31', 'fatigue'), // 2 days after
+    feel('2026-11-06', 'nausea'), // 1 day after the second shot
+    feel('2026-11-05', 'headache', 8), // before the 8 pm shot: 7 days after the first
+    feel('2026-11-14', 'heartburn'), // 9 days after
+  ];
+  assert.equal(I.daysSinceShot(at('2026-11-05', 8), shots), 7);
+  assert.equal(I.daysSinceShot(at('2026-11-05', 21), shots), 0);
+  assert.equal(I.daysSinceShot(at('2026-10-01'), shots), null);
+  const p = I.patterns(feelings, shots);
+  assert.deepEqual(p.buckets, [1, 2, 1, 0, 0, 0, 0, 2]);
+  assert.deepEqual(p.byKind.nausea, [1, 2, 0, 0, 0, 0, 0, 0]);
+  assert.equal(p.total, 6);
+  assert.equal(p.beforeFirstShot, 1);
+  assert.deepEqual(p.peaks, [1, 7]);
+  assert.equal(I.patternLine(p), 'Most entries: 1 day after and 7+ days after (2 of 6).');
+  assert.equal(I.patternLine(I.patterns([], shots)), 'Nothing logged after a shot yet.');
+  assert.equal(I.sinceLabel(0), 'Day of the shot');
+  assert.equal(I.sinceLabel(3), '3 days after');
+  assert.deepEqual(I.feelingCounts(feelings.slice(0, 3))[0], { kind: 'nausea', count: 3, strong: 0 });
+});
+
+test('protein and water: counters against the person\'s own goal, no goal means no progress', () => {
+  assert.deepEqual(I.intakeOn([{ day: TODAY, protein: 40, water: 500 }], TODAY), { day: TODAY, protein: 40, water: 500 });
+  assert.deepEqual(I.intakeOn([], TODAY), { day: TODAY, protein: 0, water: 0 });
+  assert.equal(I.progress(40, 100), 0.4);
+  assert.equal(I.progress(140, 100), 1);
+  assert.equal(I.progress(40, null), null);
+  assert.equal(Math.round(I.waterShown(I.waterStored(8, "lb"), "lb")), 8);
+  assert.equal(Math.round(I.waterStored(8, "lb")), 237);
+  assert.equal(I.waterShown(500, "kg"), 500);
 });
