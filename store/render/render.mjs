@@ -72,6 +72,7 @@ const SHOTS = [
   ['25-report-preview-free', { data: full, kv: onboardedKv({ patientName: 'Sam Rivera' }) }, 'light', async (p) => { await label(p, 'Report').click(); await pause(p); await label(p, 'Preview the report').click(); }],
   ['26-report-preview-pro', { data: full, kv: onboardedKv({ patientName: 'Sam Rivera' }), pro: true }, 'light', async (p) => { await label(p, 'Report').click(); await pause(p); await label(p, 'Preview the report').click(); }],
   ['27-settings', { data: full, kv: onboardedKv() }, 'light', async (p) => { await label(p, 'Settings').click(); }],
+  ['32-settings-private', { data: full, kv: onboardedKv() }, 'light', async (p) => { await label(p, 'Settings').click(); await pause(p); await p.mouse.move(196, 500); for (let i = 0; i < 12; i++) { await p.mouse.wheel(0, 120); await pause(p, 60); } }],
   ['28-home-dark', { data: full, kv: onboardedKv() }, 'dark', async () => {}],
   ['29-log-sheet-dark', { data: full, kv: onboardedKv() }, 'dark', async (p) => { await labelStarts(p, 'Log shot').click(); }],
   ['30-weight-chart-dark', { data: full, kv: onboardedKv(), pro: true }, 'dark', async (p) => { await label(p, 'Insights').click(); }],

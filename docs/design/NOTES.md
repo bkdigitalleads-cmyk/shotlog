@@ -37,7 +37,7 @@ Light by default. A proper dark mode follows the phone: the same notebook at nig
 - Insights: `18-weight-chart`, `19-patterns`, `20-site-history`.
 - `21-history`, `22-weight`, `23-how-i-feel`.
 - Report: `24-report`, `25-report-preview-free` (SAMPLE, one button to the paywall), `26-report-preview-pro`.
-- `27-settings`.
+- `27-settings`, `32-settings-private` (Your data, Help and About: store shot 6).
 - Dark: `28-home-dark`, `29-log-sheet-dark`, `30-weight-chart-dark`.
 
 Looked at every render; fixed from that: "Due Thursday" wrapped beside the mini map (the due line now has the full width); the unit choice cut "units" (the amount field is now a fixed width); text fields squeezed their unit suffix; the weight line was too long with its goal; the trial reminder screen was empty (it now shows the notification it promises); shot guides in the weight chart were too busy (now faint, the ticks carry it); the site rotation mixed medications (a B12 shot in the arm moved a weekly shot's rotation), now each medication keeps its own.
