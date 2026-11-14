@@ -351,3 +351,37 @@ test('CSV: every entry oldest first, quoted fields, a byte order mark, days sinc
   assert.ok(rows[3].includes('Heartburn,Mild,2,'));
   assert.equal(R.exportName('report', NOW), 'shot-log-report-2026-11-14');
 });
+
+// ---------- identity and copy ----------
+
+import { readFileSync, readdirSync } from 'node:fs';
+
+test('identity: app.json and eas.json as the brief sets them, the push plugin last, Cowork placeholders marked', () => {
+  const app = JSON.parse(readFileSync(new URL('../app.json', import.meta.url))).expo;
+  const eas = JSON.parse(readFileSync(new URL('../eas.json', import.meta.url)));
+  assert.equal(app.name, 'Shot Log');
+  assert.equal(app.slug, 'shotlog');
+  assert.equal(app.version, '1.0.0');
+  assert.equal(app.ios.bundleIdentifier, 'com.bwk.shotlog');
+  assert.equal(app.ios.buildNumber, '1');
+  assert.equal(app.owner, 'bkdeveloper123');
+  assert.equal(app.extra.eas.projectId, 'TODO_COWORK_EXPO_PROJECT_ID');
+  assert.equal(app.extra.revenueCatApiKeyIos, 'TODO_COWORK_REVENUECAT_PUBLIC_IOS_KEY');
+  assert.equal(app.plugins[app.plugins.length - 1], './plugins/withoutPushEntitlement');
+  assert.equal(eas.submit.production.ios.ascAppId, '6834850120');
+  assert.equal(JSON.parse(readFileSync(new URL('../package.json', import.meta.url))).version, '1.0.0');
+});
+
+test('copy voice: no banned words, exclamation marks, em dashes or brand drug names in the app\'s strings', () => {
+  const files = ['../App.tsx', '../index.ts', ...readdirSync(new URL('../src/', import.meta.url), { recursive: true }).filter((f) => /\.tsx?$/.test(f)).map((f) => `../src/${f}`)];
+  const banned = /\b(Unlock|Premium|Seamless|Effortless|Welcome|Let's|Let’s|Ozempic|Wegovy|Mounjaro|Zepbound|Saxenda|Rybelsus|Trulicity|Victoza)\b|—/;
+  for (const f of files) {
+    const src = readFileSync(new URL(f, import.meta.url), 'utf8');
+    // String literals only (quotes, backticks and JSX text between tags).
+    const strings = [...src.matchAll(/'([^'\n]*)'|`([^`]*)`|>([^<>{}\n]+)</g)].map((m) => m[1] ?? m[2] ?? m[3]);
+    for (const s of strings.filter((x) => !/^\.\.?\//.test(x))) {
+      assert.ok(!banned.test(s), `${f}: "${s}"`);
+      assert.ok(!/[A-Za-z]!(\s|$)/.test(s), `${f}: exclamation in "${s}"`);
+    }
+  }
+});
