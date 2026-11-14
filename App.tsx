@@ -18,8 +18,10 @@ import { FeelTray, WeightTray, EntryRequest } from './src/screens/Entries';
 import MedsScreen from './src/screens/Meds';
 import SettingsScreen from './src/screens/Settings';
 import ReminderAsk from './src/screens/ReminderAsk';
+import Insights from './src/screens/Insights';
+import Report from './src/screens/Report';
 import TabRail, { Tab } from './src/ui/TabRail';
-import { PageTitle, Toast } from './src/ui/Kit';
+import { Toast } from './src/ui/Kit';
 
 /** A screen over the tabs. */
 type Over = 'settings' | 'meds' | null;
@@ -98,7 +100,8 @@ function Shell() {
         onAddFeel={() => setFeel({ entry: null, day: addDays(dayKey(Date.now()), -1) })}
       />
     );
-  else body = <PageTitle theme={theme} title={tab === 'insights' ? 'Insights' : 'Report'} />;
+  else if (tab === 'insights') body = <Insights />;
+  else body = <Report />;
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.bg, paddingTop: insets.top }}>

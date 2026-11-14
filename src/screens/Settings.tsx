@@ -9,9 +9,11 @@ import { atTime, dayKey, timeLabel } from '../days';
 import { convertWeight, fmt1, round1, waterShown, waterStored } from '../insights';
 import { TRACKS, WEIGHT_UNITS, waterUnit } from '../labels';
 import { requestReminderPermission } from '../reminder';
+import { shareCsv } from '../exporting';
+import { gate } from '../gates';
 import { PRIVACY_URL, SUPPORT_EMAIL, SUPPORT_URL, TERMS_URL } from '../links';
 import type { WeightUnit } from '../model';
-import { Choice, Eyebrow, Field, Row, Rows, SwitchRow, Tag, Tags, TopBar } from '../ui/Kit';
+import { Choice, Eyebrow, Field, ProMark, Row, Rows, SwitchRow, Tag, Tags, TopBar } from '../ui/Kit';
 import When from '../ui/When';
 
 /** The medical line, the same here, in the App Review note and on the website. */
@@ -28,7 +30,7 @@ export interface SettingsSlots {
 export default function SettingsScreen({ onBack, onMeds, slots = {} }: { onBack: () => void; onMeds: () => void; slots?: SettingsSlots }) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
-  const { settings, updateSettings, meds, refresh, testBuild, say } = useApp();
+  const { settings, updateSettings, meds, shots, weights, feelings, isPro, showPaywall, refresh, testBuild, say } = useApp();
   const u = settings.weightUnit;
   // Test builds only: seven taps on the version line open the testing tools.
   const [testing, setTesting] = useState(false);
@@ -186,6 +188,18 @@ export default function SettingsScreen({ onBack, onMeds, slots = {} }: { onBack:
           <Eyebrow theme={theme}>Your data</Eyebrow>
           <Rows theme={theme}>
             {slots.data}
+            <Row
+              theme={theme}
+              glyph="table"
+              label="Export CSV"
+              sub="Every shot, weight and side effect"
+              right={isPro ? undefined : <ProMark theme={theme} />}
+              onPress={async () => {
+                const locked = gate('csv', isPro);
+                if (locked) return showPaywall(locked);
+                await shareCsv({ shots, weights, feelings }).catch(() => say('The CSV did not open. Try once more.'));
+              }}
+            />
             <Row theme={theme} glyph="trash" danger label="Delete everything" onPress={onDeleteAll} chevron={false} />
           </Rows>
           <Text style={[type.small, styles.note, { color: theme.inkSoft }]}>Everything stays on this iPhone. No account, nothing uploaded.</Text>

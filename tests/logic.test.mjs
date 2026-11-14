@@ -16,6 +16,7 @@ const G = await import('../src/gates.ts');
 const O = await import('../src/offer.ts');
 const F = await import('../src/flow.ts');
 const I = await import('../src/insights.ts');
+const R = await import('../src/report.ts');
 
 /** Local time on a day: at('2026-11-14', 9, 30). */
 const at = (day, h = 12, m = 0) => D.atTime(day, h, m);
@@ -297,4 +298,56 @@ test('protein and water: counters against the person\'s own goal, no goal means 
   assert.equal(Math.round(I.waterShown(I.waterStored(8, "lb"), "lb")), 8);
   assert.equal(Math.round(I.waterStored(8, "lb")), 237);
   assert.equal(I.waterShown(500, "kg"), 500);
+});
+
+// ---------- the report and the CSV ----------
+
+test('report: shots in range oldest first, dose history with dates, weight change, side-effect counts, the footer', () => {
+  const med = { id: 1, name: 'Semaglutide', schedule: { kind: 'interval', everyDays: 7 }, startDay: '2026-09-03', doses: [change('2026-09-03', '0.25'), change('2026-10-01', '0.5')], remind: true, position: 0, createdAt: 0 };
+  const shots = [shot('2026-11-12', { site: 'abdomen-left' }), shot('2026-11-05', { site: 'abdomen-right', backfilled: true }), shot('2026-09-03', { amount: '0.25' })];
+  const weights = [weight('2026-09-02', 214), weight('2026-10-20', 206), weight('2026-11-13', 201.2), weight('2026-11-13', 201.6, { h: 20 })];
+  const feelings = [feel('2026-11-06', 'nausea', 12, 'moderate'), feel('2026-11-13', 'nausea'), feel('2026-11-13', 'fatigue', 12, 'strong')];
+  const r = R.buildReport({ meds: [med], shots, weights, feelings, unit: 'lb', rangeDays: 30, now: NOW, patient: '  Sam  ' });
+  assert.equal(r.patient, 'Sam');
+  assert.equal(r.from, '2026-10-16');
+  assert.deepEqual(r.shots.map((s) => s.date), ['Nov 5, 2026', 'Nov 12, 2026']);
+  assert.equal(r.shots[0].site, 'Right abdomen');
+  assert.equal(r.shots[0].later, true);
+  assert.equal(r.shots[1].dose, '0.5 mg');
+  assert.deepEqual(r.meds[0].doses, [{ from: 'Sep 3, 2026', dose: '0.25 mg' }, { from: 'Oct 1, 2026', dose: '0.5 mg' }]);
+  assert.equal(r.weightStart.value, 206);
+  assert.equal(I.round1(r.weightEnd.value), 201.4);
+  assert.equal(I.round1(r.weightChange), -4.6);
+  // Since the weight on the first shot's day eve (Sep 2), across the whole log.
+  assert.equal(I.round1(r.sinceFirstShot.change), -12.6);
+  assert.deepEqual(r.feelings.map((f) => [f.label, f.mild, f.moderate, f.strong, f.total]), [['Nausea', 1, 1, 0, 2], ['Fatigue', 0, 0, 1, 1]]);
+  assert.equal(r.feelingTotal, 3);
+  assert.deepEqual(r.byDaysSince, [0, 3, 0, 0, 0, 0, 0, 0]);
+  const html = R.reportHtml(r);
+  assert.ok(html.includes('Logged by the patient with Shot Log. Not medical advice.'));
+  assert.ok(html.includes('0.25 mg from Sep 3, 2026'));
+  assert.ok(html.includes('<svg'));
+  assert.ok(!html.includes('SAMPLE'));
+  assert.ok(R.reportHtml(r, { sample: true }).includes('SAMPLE'));
+  assert.ok(!/[!\u2014]/.test(html.replace(/<!doctype html>/i, '')), 'no exclamation marks or em dashes');
+  // An empty range still prints.
+  const empty = R.buildReport({ meds: [], shots: [], weights: [], feelings: [], unit: 'kg', rangeDays: 90, now: NOW, patient: '' });
+  assert.ok(R.reportHtml(empty).includes('No shots in this range.'));
+  assert.equal(R.rangeText(empty), 'Aug 17, 2026 to Nov 14, 2026 (90 days)');
+});
+
+test('CSV: every entry oldest first, quoted fields, a byte order mark, days since the shot', () => {
+  const csv = R.entriesCsv({
+    shots: [shot('2026-11-12', { site: 'thigh-left', note: 'after dinner, "late"' })],
+    weights: [weight('2026-11-13', 201.4)],
+    feelings: [feel('2026-11-14', 'heartburn', 9, 'mild')],
+  });
+  assert.ok(csv.startsWith('\uFEFFDate,Time,Type,'));
+  const rows = csv.trim().split('\r\n');
+  assert.equal(rows.length, 4);
+  assert.ok(rows[1].startsWith('2026-11-12,09:00,Shot,Semaglutide,0.5,mg,Left thigh,'));
+  assert.ok(rows[1].includes('"after dinner, ""late"""'));
+  assert.ok(rows[2].startsWith('2026-11-13,08:00,Weight,,,,,201.4,lb'));
+  assert.ok(rows[3].includes('Heartburn,Mild,2,'));
+  assert.equal(R.exportName('report', NOW), 'shot-log-report-2026-11-14');
 });
