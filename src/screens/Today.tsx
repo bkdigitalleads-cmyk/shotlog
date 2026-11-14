@@ -106,7 +106,7 @@ export default function Today({
           label="Log shot"
           sub={med ? [dose, next ? siteName(next) : null].filter(Boolean).join(', ') || undefined : undefined}
           hint="Opens the log sheet, already filled in. Save is the only tap needed."
-          onPress={() => onLogShot(med?.id ?? null)}
+          onPress={() => (med ? onLogShot(med.id) : onMeds())}
         />
 
         <View>
