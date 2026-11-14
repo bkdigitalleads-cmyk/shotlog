@@ -2,7 +2,7 @@
 
 Everything here is pasted into App Store Connect by Brian and Cowork. No em dashes anywhere, no brand drug names (the brands of these medications are trademarks; only generic names appear), no "Unlock", "Premium", "Seamless", "Effortless", "Welcome", "Let's" or exclamation marks, no weight-loss promises and no before-and-after language. Support email: bkdigitalleads@gmail.com.
 
-App record: bundle id com.bwk.shotlog, ASC app id 6834850120 (https://apps.apple.com/app/id6834850120, eas.json `ascAppId`), Expo owner bkdeveloper123, slug shotlog. Still to fill before the first build (Cowork): app.json `extra.eas.projectId` (now TODO_COWORK_EXPO_PROJECT_ID) and `extra.revenueCatApiKeyIos` (now TODO_COWORK_REVENUECAT_PUBLIC_IOS_KEY; the app runs with purchases off until it starts with `appl_`).
+App record: bundle id com.bwk.shotlog, ASC app id 6834850120 (https://apps.apple.com/app/id6834850120, eas.json `ascAppId`), Expo project bkdeveloper123/shotlog (projectId 0cdea6c0-e329-4f94-979a-5c9d8fdffc37, app.json `extra.eas.projectId`), RevenueCat public iOS key in app.json `extra.revenueCatApiKeyIos` (set; purchases are on). The three products are live in App Store Connect and attached to entitlement `pro`, offering `default`.
 
 ## Name (28/30)
 Peptide Tracker: GLP-1 Shots

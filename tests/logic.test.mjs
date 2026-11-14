@@ -356,7 +356,7 @@ test('CSV: every entry oldest first, quoted fields, a byte order mark, days sinc
 
 import { readFileSync, readdirSync } from 'node:fs';
 
-test('identity: app.json and eas.json as the brief sets them, the push plugin last, Cowork placeholders marked', () => {
+test('identity: app.json and eas.json as the brief sets them, the push plugin last, the real Expo and RevenueCat ids', () => {
   const app = JSON.parse(readFileSync(new URL('../app.json', import.meta.url))).expo;
   const eas = JSON.parse(readFileSync(new URL('../eas.json', import.meta.url)));
   assert.equal(app.name, 'Shot Log');
@@ -365,8 +365,10 @@ test('identity: app.json and eas.json as the brief sets them, the push plugin la
   assert.equal(app.ios.bundleIdentifier, 'com.bwk.shotlog');
   assert.equal(app.ios.buildNumber, '1');
   assert.equal(app.owner, 'bkdeveloper123');
-  assert.equal(app.extra.eas.projectId, 'TODO_COWORK_EXPO_PROJECT_ID');
-  assert.equal(app.extra.revenueCatApiKeyIos, 'TODO_COWORK_REVENUECAT_PUBLIC_IOS_KEY');
+  assert.equal(app.extra.eas.projectId, '0cdea6c0-e329-4f94-979a-5c9d8fdffc37');
+  // The public RevenueCat SDK key: purchases run only when it starts with appl_ (src/purchases.ts).
+  assert.equal(app.extra.revenueCatApiKeyIos, 'appl_QBzGUZCfiySzpdMHDTeVNbspBew');
+  assert.ok(app.extra.revenueCatApiKeyIos.startsWith('appl_'));
   assert.equal(app.plugins[app.plugins.length - 1], './plugins/withoutPushEntitlement');
   assert.equal(eas.submit.production.ios.ascAppId, '6834850120');
   assert.equal(JSON.parse(readFileSync(new URL('../package.json', import.meta.url))).version, '1.0.0');

@@ -51,9 +51,9 @@
       "./plugins/withoutPushEntitlement"
     ],
     "extra": {
-      "revenueCatApiKeyIos": "TODO_COWORK_REVENUECAT_PUBLIC_IOS_KEY",
+      "revenueCatApiKeyIos": "appl_QBzGUZCfiySzpdMHDTeVNbspBew",
       "eas": {
-        "projectId": "TODO_COWORK_EXPO_PROJECT_ID"
+        "projectId": "0cdea6c0-e329-4f94-979a-5c9d8fdffc37"
       }
     },
     "owner": "bkdeveloper123"

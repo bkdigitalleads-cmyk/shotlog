@@ -2,6 +2,11 @@
 
 Newest first. One entry per commit: date, version/build, what changed and why, and how it was checked.
 
+- 2026-11-14: 1.0.0 build 1, setup values (same branch claude/shotlog-1.0.0, PR #1, not merged, no build). Brian and Cowork finished the Expo and RevenueCat setup.
+  - app.json `extra.eas.projectId` 0cdea6c0-e329-4f94-979a-5c9d8fdffc37 (Expo project bkdeveloper123/shotlog) and `extra.revenueCatApiKeyIos` (the public `appl_` SDK key, so purchases are on) replace the TODO_COWORK placeholders. eas.json ascAppId stays 6834850120. RevenueCat: entitlement `pro`, offering `default` with $rc_weekly, $rc_annual, $rc_lifetime; App Store Connect has shot_pro_weekly, shot_pro_yearly and shot_pro_lifetime live, matching src/offer.ts PRODUCTS and the paywall. Version 1.0.0 and build 1 unchanged.
+  - With the project connected, merging this PR to main now starts the EAS build and the upload to TestFlight (.eas/workflows/deploy.yml). Not merged; Brian decides.
+  - CLAUDE.md, store/metadata.md and the identity check updated to the real ids.
+  - Checked: npx tsc --noEmit clean; npm test 19 pass (the identity check now expects the real projectId and an `appl_` key); npx expo export --platform ios bundles (915 modules); npx expo config --type introspect shows the projectId, the `appl_` key, owner bkdeveloper123, 1.0.0 build 1, ios.entitlements {}, no usage strings, withoutPushEntitlement last.
 - 2026-11-14: 1.0.0 build 1, part 7 of 7: checks and the PR (branch claude/shotlog-1.0.0, PR to main, not merged, no EAS build, no spend).
   - Two more unit checks: the identity in app.json and eas.json (name, slug, bundle id, 1.0.0 build 1, owner, the two Cowork placeholders, withoutPushEntitlement last, ascAppId 6834850120), and a copy-voice scan of every string in App.tsx, index.ts and src/ (no Unlock, Premium, Seamless, Effortless, Welcome, Let's, no brand drug names, no exclamation marks, no em dashes). store/metadata.md's rule line no longer names the brands it rules out.
   - Checked:
