@@ -1,0 +1,50 @@
+@AGENTS.md
+
+# Shot Log (shotlog)
+
+App #15 in Brian's iOS app portfolio (seller bkdigitalleads-cmyk). Expo SDK 57, React Native 0.86, TypeScript, expo-sqlite, RevenueCat, expo-notifications (local only: shot reminders with a snooze, and the trial reminder), expo-print for the report PDF, react-native-svg for the body map and the charts. Engine forked from Migraine Log (migrainelog main at 402980c, Nov 14, 2026); the onboarding and paywall order from Pumping 1.0.1 (first real action before any paywall); the startup guard from Signature Maker (index.ts loads App in a try and shows a StartupFailure screen; App.tsx opens after 6 seconds if fonts never resolve; an error boundary around the tree). No local native modules, and no native library migrainelog does not already ship.
+
+- App Store name: "Peptide Tracker: GLP-1 Shots". Subtitle "Shot, Protein & Weight Log". Home screen name and in-app name: "Shot Log". Category Health & Fitness, secondary Medical. ASC app id 6834850120 (eas.json `ascAppId`). Bundle ID: com.bwk.shotlog. Expo slug and scheme: shotlog. Owner bkdeveloper123. GitHub: bkdigitalleads-cmyk/shotlog.
+- Not set up yet (Cowork fills these before the first build): app.json `extra.eas.projectId` (TODO_COWORK_EXPO_PROJECT_ID) and `extra.revenueCatApiKeyIos` (TODO_COWORK_REVENUECAT_PUBLIC_IOS_KEY, the public SDK key that starts with `appl_`). The app runs with purchases off whenever that key does not start with `appl_`.
+- Not in the store yet. Version 1.0.0 build 1 is on branch claude/shotlog-1.0.0 (PR to main, not merged, no EAS build).
+- What it is: a shot log for people on a weekly or daily injectable, mostly GLP-1 medication, and people who take peptides. Log a shot with the dose and the site in a few seconds; the next due day and the next site in the person's own rotation; weight, how I feel, protein and water against the shot schedule; a report for the prescriber (PDF) and a CSV. No account, no network, nothing leaves the phone.
+- Medical line, everywhere it appears (Settings About, the website, the App Review note): a personal log that does not diagnose, treat, calculate doses or give medical advice; follow your prescriber. Never add suggested doses, titration schedules, mixing or unit-conversion math for doses, a compound library, links to sellers, estimated drug-level curves, or any network feature without Brian asking.
+- No brand drug names anywhere (Ozempic, Wegovy, Mounjaro, Zepbound and the like are trademarks): not in the app's own copy, the store text, the keywords or the website. A person can type any name for their own medication; the suggestions are generic names only.
+- Support email everywhere: bkdigitalleads@gmail.com. No personal email in the app, the site or the store notes.
+
+## How shipping works (read before every push)
+
+- A push to `main` that touches app.json, eas.json, package*.json, App.tsx, index.ts, src/, assets/ or modules/ starts an EAS workflow (.eas/workflows/deploy.yml) once the Expo project is connected. It builds iOS in the cloud and uploads the build to App Store Connect / TestFlight. Every such push costs a paid build credit. (modules/ stays in the filter from the engine; this app has none.)
+- Never merge to `main` without Brian. Work on a branch and open a PR.
+- Pushes that only change Markdown files (CLAUDE.md, NOTES.md, README.md, store/metadata.md), store/*.js or docs/ do not build.
+- Version numbers are local (`appVersionSource: local`, no auto-increment). Before any push that builds: raise `ios.buildNumber` in app.json by 1, and raise `version` (for example 1.0.0 to 1.0.1) when it will become a new App Store release. A build number that was already used makes the upload fail.
+- Before every commit: run `npx tsc --noEmit` and `npm test`, and fix every error.
+- Batch the changes for one app into one push. Ask Brian before any push that builds, and say what is in it.
+- Submitting for App Review, release dates, prices, the subtitle, keywords, the age rating and screenshots all happen in App Store Connect. Brian and his Cowork session handle that side. Do not try to do it from here.
+
+## Rules
+
+- Brian handles every credential and sign-in. Never type, paste, print or store passwords, tokens or API keys. If git push asks for credentials, stop and tell Brian. The RevenueCat public key, the Expo projectId and the ASC app id are filled in by Brian or Cowork.
+- No spending (paid services, extra builds beyond what Brian approved) without Brian saying go.
+- Never change the RevenueCat entitlement id `pro`, the offering `default`, the product ids (shot_pro_weekly, shot_pro_yearly, shot_pro_lifetime), the packages ($rc_weekly, $rc_annual, $rc_lifetime) or src/purchases.ts (a copy of the engine's, with the Pro re-check) without Brian asking. Paying users must never lose Pro. Lifetime and Manage Subscriptions live in src/plans.ts.
+- Logging shots for one medication, the next-due line, one reminder, weight entry, how I feel and the last 30 days of history are free forever. Never put logging a shot behind the paywall (src/gates.ts holds the rules, with checks).
+- Paywall timing (src/flow.ts, App.tsx): nothing before the first saved shot; after it the reminder question, then "Try it free" and the day-before reminder screen when trial-eligible, then the onboarding paywall with the X after 3 seconds, once ever; one second chance on a later day; never two paywalls the app opens on its own in one launch; no trial wording on in-app paywalls.
+- After launch the SQLite schema must stay backward compatible: never drop or rename columns or tables. New columns go in through a new step in `migrate()` in src/db.ts (guarded by PRAGMA user_version). Settings live as key/value rows; a new setting just gets a default in `parseSettings`. Shots keep their own copy of the medication's name and the dose as typed, so deleting a medication or changing its dose never changes history.
+- Do not change the app name, subtitle, keywords or the rating-prompt triggers (two shots logged, first report preview; only on a later-day launch, never in onboarding, never in a launch with a paywall) without asking.
+- Keep changes small. Fix what the task needs and tidy only the files you already touch. List anything else you notice in NOTES.md under "Noticed, not changed" instead of fixing it. No broad refactors, dependency upgrades or Expo SDK upgrades unless Brian asks.
+- Copy voice: plain, short and kind. No "Unlock", "Premium", "Seamless", "Effortless", "Welcome", "Let's", exclamation marks or em dashes in any user-facing text (app, PDFs, notifications, store text, website), and none in text Brian sends to other people. No weight-loss promises and no before-and-after language.
+- Design, "a calm clinic notebook" (docs/design/NOTES.md): light by default, a proper dark mode that follows the phone. The fountain-pen blue (`live`) is for the live action only (Log shot, Save, Continue, the next site on the map). Use the theme's tokens, never ad hoc values: one type scale (`type.display` 30, `type.title` 20, `type.body` 17, `type.small` 13), one spacing scale (`space`: 4, 8, 12, 16, 24, 32, 48), two corners (`radius.leaf` 14 for leaves, trays and the main action; `radius.tab` 8 for tags, choices, inputs and plain buttons), tabular figures (`tabular`) for every dose, weight and count. The kit in src/ui/Kit.tsx has its own names (Tap, MainAction, Leaf, Rows, Row, Tag, Choice, Figure, Eyebrow, Tray, TabRail); every control has a VoiceOver label.
+- Native library rule (from Signature Maker build 1): do not add a native library unless you have checked its iOS module does not use the legacy bridge on React Native 0.86. Use what migrainelog already ships for drawing and charts (react-native-svg). If Skia is ever needed, 2.14.0 or later.
+- plugins/withoutPushEntitlement.js stays last in app.json plugins. After touching plugins, check `npx expo config --type introspect` still shows `ios.entitlements` as `{}` and no camera, photo, location, microphone or health usage strings.
+- No HealthKit in 1.0.0 (Apple Health weight sync is noted for 1.0.1). Health data never leaves the device. Never add analytics, a server, sync or a network call. Privacy label: Data Not Collected.
+
+## Logging (so Brian's Cowork session can follow along)
+
+- With every commit, add an entry at the top of NOTES.md in the same commit: date, version/build, what changed and why, and how it was checked.
+
+## Testing
+
+- Type check: `npx tsc --noEmit`. Unit checks (next-due dates on both schedule types and across dose changes, site rotation, weight averages and change since the first shot, side effects by days since a shot, the one-medication and 30-day gates, the report and CSV, trial and plan rules, the first-run paywall flow, the lifetime-with-subscription case, the rating guard): `npm test`. Bundle check: `npx expo export --platform ios`. Config: `npx expo config --type introspect`. `npx expo-doctor`.
+- Pure logic lives in src/days.ts, src/schedule.ts, src/sites.ts, src/insights.ts, src/gates.ts, src/flow.ts, src/offer.ts, src/labels.ts and src/report.ts, with no React or native imports (they import each other with a `.ts` extension so Node runs them directly), so `npm test` checks exactly what the app runs.
+- Simulator (needs Xcode): `npx expo start --ios`. Purchases do not complete in the simulator.
+- Real-device check: TestFlight build from the EAS workflow, on Brian's iPhone. Haptics, the reminders and their snooze, Dynamic Type at the largest sizes, VoiceOver, the native date pickers, the printed PDF (WebKit) and StoreKit can only be judged there. NOTES.md has the TestFlight checklist.
