@@ -1,0 +1,5 @@
+node_modules
+package-lock.json
+.report-page1.png
+.report.html
+render/out/
