@@ -277,6 +277,17 @@ export function TrialSteps({ onDone }: { onDone: () => void }) {
       theme={theme}
       title="We’ll remind you the day before it ends."
       line="One notification on this iPhone. Nothing else changes."
+      show={
+        <View style={[styles.banner, { backgroundColor: theme.surface, borderColor: theme.edge }]}>
+          <View style={[styles.bannerIcon, { backgroundColor: theme.ink }]}>
+            <Glyph name="ring" size={18} color={theme.bg} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[type.small, styles.semi, { color: theme.ink }]}>Your free trial ends tomorrow</Text>
+            <Text style={[type.small, { color: theme.inkSoft }]}>Shot Log Pro renews tomorrow. Cancel anytime in Settings, Apple ID, Subscriptions.</Text>
+          </View>
+        </View>
+      }
       button="Continue"
       waiting={waiting}
       onPress={async () => {
@@ -393,6 +404,8 @@ const styles = StyleSheet.create({
   footer: { paddingHorizontal: space.l, gap: space.s, paddingTop: space.m },
   waiting: { height: 50 },
   noPaymentRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.s, minHeight: 32 },
+  banner: { flexDirection: 'row', gap: space.m, alignItems: 'flex-start', borderWidth: 1, borderRadius: radius.leaf, padding: space.m },
+  bannerIcon: { width: 32, height: 32, borderRadius: radius.tab, alignItems: 'center', justifyContent: 'center' },
   timeRow: { flexDirection: 'row', alignItems: 'center', gap: space.m, paddingVertical: space.s },
   paper: { borderWidth: 1, borderRadius: radius.tab / 2, padding: space.l, transform: [{ rotate: '-1.5deg' }] },
   paperH: { fontFamily: fonts.serif, fontSize: 18, color: PAPER_INK },

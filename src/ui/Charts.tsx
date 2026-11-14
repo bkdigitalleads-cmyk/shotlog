@@ -57,7 +57,7 @@ export function WeightChart({
         ))}
         {shotDays.map((day, i) => (
           <React.Fragment key={`${day}-${i}`}>
-            <Line x1={x(day)} x2={x(day)} y1={pad.t} y2={base} stroke={theme.live} strokeOpacity={0.14} strokeWidth={1} />
+            <Line x1={x(day)} x2={x(day)} y1={pad.t} y2={base} stroke={theme.live} strokeOpacity={0.06} strokeWidth={1} />
             <Line x1={x(day)} x2={x(day)} y1={base + 4} y2={base + 12} stroke={theme.live} strokeWidth={2.2} strokeLinecap="round" />
           </React.Fragment>
         ))}

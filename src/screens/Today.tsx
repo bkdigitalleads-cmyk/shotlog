@@ -41,7 +41,8 @@ export default function Today({
 
   const med = soonestMed(active, shots);
   const others = active.filter((m) => m.id !== med?.id);
-  const history = useMemo(() => [...shots].sort((a, b) => a.at - b.at), [shots]);
+  // The site rotation is the medication's own: a B12 shot in the arm does not move a weekly shot's rotation.
+  const history = useMemo(() => shots.filter((s) => s.medId === med?.id).sort((a, b) => a.at - b.at), [shots, med]);
   const lastSite = useMemo(() => {
     for (let i = history.length - 1; i >= 0; i--) if (history[i].site) return history[i].site;
     return null;
@@ -62,23 +63,21 @@ export default function Today({
       <View style={styles.body}>
         {med && dueLine ? (
           <Leaf theme={theme} margin style={styles.next}>
+            <Eyebrow theme={theme}>Next shot</Eyebrow>
+            <Text style={[type.display, { color: theme.ink }]} accessibilityRole="header" maxFontSizeMultiplier={1.4}>
+              {dueLine.title}
+            </Text>
+            <Text style={[type.small, { color: theme.inkSoft }, tabular]}>{dueLine.sub}</Text>
             <View style={styles.nextInner}>
-              <View style={styles.nextText}>
-                <Eyebrow theme={theme}>Next shot</Eyebrow>
-                <Text style={[type.display, { color: theme.ink }]} accessibilityRole="header" maxFontSizeMultiplier={1.4}>
-                  {dueLine.title}
+              <Tap onPress={onMeds} accessibilityRole="button" accessibilityLabel={`${med.name}, ${dose || 'no dose typed'}, ${scheduleLabel(med.schedule)}. Edit`} style={styles.medLine}>
+                <Text style={[type.body, styles.semi, { color: theme.ink }, tabular]} numberOfLines={2}>
+                  {med.name}
                 </Text>
-                <Text style={[type.small, { color: theme.inkSoft }, tabular]}>{dueLine.sub}</Text>
-                <Tap onPress={onMeds} accessibilityRole="button" accessibilityLabel={`${med.name}, ${dose || 'no dose typed'}, ${scheduleLabel(med.schedule)}. Edit`} style={styles.medLine}>
-                  <Text style={[type.body, styles.semi, { color: theme.ink }, tabular]} numberOfLines={1}>
-                    {med.name}
-                    {dose ? <Text style={{ color: theme.inkSoft }}>{`  ${dose}`}</Text> : null}
-                  </Text>
-                  <Text style={[type.small, { color: theme.inkSoft }]}>{scheduleLabel(med.schedule)}</Text>
-                </Tap>
-              </View>
+                {dose ? <Text style={[type.title, { color: theme.ink }, tabular]}>{dose}</Text> : null}
+                <Text style={[type.small, { color: theme.inkSoft }]}>{scheduleLabel(med.schedule)}</Text>
+              </Tap>
               <View style={styles.mini} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
-                <BodyMap theme={theme} width={132} last={lastSite} next={next} caption={false} />
+                <BodyMap theme={theme} width={150} last={lastSite} next={next} caption={false} />
               </View>
             </View>
             <Text style={[type.small, styles.rotation, { color: theme.inkSoft, borderTopColor: theme.rule }]}>{rotationLine(lastSite, next)}</Text>
@@ -116,7 +115,7 @@ export default function Today({
               theme={theme}
               glyph="scale"
               label="Weight"
-              sub={last ? `Last ${fmt1(last.value)} ${settings.weightUnit}, ${whenShort(last.at, now)}${settings.weightGoal ? ` · Goal ${fmt1(settings.weightGoal)}` : ''}` : 'Tap to add'}
+              sub={last ? `Last ${fmt1(last.value)} ${settings.weightUnit}, ${whenShort(last.at, now).split(',')[0]}${settings.weightGoal ? ` · Goal ${fmt1(settings.weightGoal)} ${settings.weightUnit}` : ''}` : 'Tap to add'}
               onPress={onWeight}
             />
             <Row
@@ -252,10 +251,9 @@ const styles = StyleSheet.create({
   body: { paddingHorizontal: space.l, gap: space.xl },
   semi: { fontWeight: '600' },
   next: { paddingLeft: space.xxl },
-  nextInner: { flexDirection: 'row', alignItems: 'flex-start', gap: space.s },
-  nextText: { flex: 1 },
-  medLine: { marginTop: space.m, minHeight: 44, justifyContent: 'center' },
-  mini: { marginTop: -space.xs, marginRight: -space.s },
+  nextInner: { flexDirection: 'row', alignItems: 'center', gap: space.s, marginTop: space.m },
+  medLine: { flex: 1, minHeight: 44, justifyContent: 'center', gap: 2 },
+  mini: { marginRight: -space.s },
   rotation: { marginTop: space.m, paddingTop: space.m, borderTopWidth: StyleSheet.hairlineWidth },
   intake: { paddingVertical: space.s },
   intakeRow: { flexDirection: 'row', alignItems: 'center', gap: space.m, minHeight: 56 },

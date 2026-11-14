@@ -61,13 +61,22 @@ export default function LogShot({ request, onClose }: { request: LogShotRequest 
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
 
-  // The other shots, oldest first, for the rotation (the one being edited left out).
-  const history = useMemo(() => [...shots].filter((s) => s.id !== editing?.id).sort((a, b) => a.at - b.at), [shots, editing]);
+  // This medication's other shots, oldest first, for its rotation (the one being edited left out).
+  const history = useMemo(() => [...shots].filter((s) => s.id !== editing?.id && s.medId === medId).sort((a, b) => a.at - b.at), [shots, editing, medId]);
   const lastSite = useMemo(() => {
     for (let i = history.length - 1; i >= 0; i--) if (history[i].site) return history[i].site;
     return null;
   }, [history]);
   const suggested = useMemo(() => nextSite(history.map((s) => s.site)), [history]);
+
+  /** The next site in one medication's own rotation. */
+  const nextSiteFor = (id: number | null) =>
+    nextSite(
+      [...shots]
+        .filter((x) => x.medId === id)
+        .sort((a, b) => a.at - b.at)
+        .map((x) => x.site)
+    );
 
   const prefillDose = (m: Med | undefined, when: number) => {
     const d = m ? doseOn(m.doses, dayKey(when)) : null;
@@ -92,7 +101,7 @@ export default function LogShot({ request, onClose }: { request: LogShotRequest 
     const when = request.day ? new Date(`${request.day}T09:00:00`).getTime() : Date.now();
     setMedId(m?.id ?? null);
     prefillDose(m, when);
-    setSite(suggested);
+    setSite(nextSiteFor(m?.id ?? null));
     setAt(Math.min(when, Date.now()));
     setNote('');
     setShowWhen(!!request.past);
@@ -180,7 +189,10 @@ export default function LogShot({ request, onClose }: { request: LogShotRequest 
                 on={medId === m.id}
                 onPress={() => {
                   setMedId(m.id);
-                  if (!editing) prefillDose(m, at);
+                  if (!editing) {
+                    prefillDose(m, at);
+                    setSite(nextSiteFor(m.id));
+                  }
                 }}
               />
             ))}
@@ -231,8 +243,8 @@ export default function LogShot({ request, onClose }: { request: LogShotRequest 
 
 const styles = StyleSheet.create({
   doseRow: { flexDirection: 'row', gap: space.m, alignItems: 'flex-end' },
-  amount: { flex: 1 },
-  unit: { flex: 1.6 },
+  amount: { width: 104 },
+  unit: { flex: 1 },
   rotation: { marginTop: space.s },
   nowRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 44 },
 });

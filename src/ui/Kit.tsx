@@ -506,7 +506,7 @@ const styles = StyleSheet.create({
   toastWrap: { position: 'absolute', left: space.l, right: space.l, alignItems: 'center' },
   toast: { borderRadius: radius.leaf, paddingHorizontal: space.l, paddingVertical: space.m, maxWidth: 520 },
   field: { flexDirection: 'row', alignItems: 'center', borderRadius: radius.tab, borderWidth: 1, paddingHorizontal: space.m, minHeight: 48, gap: space.s },
-  fieldInput: { flex: 1, paddingVertical: space.s },
+  fieldInput: { flex: 1, minWidth: 0, paddingVertical: space.s },
   radio: { width: 22, height: 22, borderRadius: radius.round, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
   radioDot: { width: 10, height: 10, borderRadius: radius.round },
 });
