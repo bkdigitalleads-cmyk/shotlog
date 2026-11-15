@@ -144,4 +144,14 @@ export const FONT_FILES = {
 };
 
 /** The app icon's own colours (store/icon-pen.svg), for the few places the app draws its icon. Not UI tokens. */
-export const ICON_COLORS = { tile: '#2747C9', cap: '#F2714F', body: '#FFFFFF', bodyShade: '#DCE2EE', window: '#1F2840', level: '#FFC2A8' };
+export const ICON_COLORS = {
+  /** The tile, flat at small sizes (the icon itself is a #4263EE to #1C34A6 gradient). */
+  tile: '#2F4BCB',
+  cap: '#FFC2A8',
+  capShade: '#F39A7A',
+  body: '#FFFFFF',
+  bodyShade: '#D5DDFF',
+  windowTop: '#1B2F97',
+  windowBottom: '#27409F',
+  level: '#FFC2A8',
+};

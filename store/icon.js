@@ -17,18 +17,34 @@ const INK = '#1D232B';
 const BLUE = '#2747C9';
 const MARGIN = '#DDA89A';
 const CHOSEN = 'pen';
-const BLUE_TILE = '#2747C9';
+// The flat tile colour, where a single colour is needed (Android's background colour, flattening).
+const BLUE_TILE = '#2F4BCB';
 
 // The pen, from its own SVG file, so Brian's original artwork can replace it in one step.
 const PEN_SVG = fs.readFileSync(path.join(__dirname, 'icon-pen.svg'), 'utf8');
 const inner = (svgText) => svgText.replace(/^[\s\S]*?<svg[^>]*>/, '').replace(/<\/svg>\s*$/, '').replace(/<!--[\s\S]*?-->/g, '');
-const TILE_RE = /<rect[^>]*width="1024"[^>]*height="1024"[^>]*\/>/;
+// The tile is every full-size rect (the gradient and the glow over it).
+const TILE_RE = /<rect[^>]*width="1024"[^>]*height="1024"[^>]*\/>/g;
 const BODY_RE = /<(linear|radial)Gradient id="body"[\s\S]*?<\/(linear|radial)Gradient>/;
-/** The pen alone (no tile): `body` 'white' keeps the artwork's body, 'ink' paints it in the app's ink. */
+const WIN_RE = /<(linear|radial)Gradient id="win"[\s\S]*?<\/(linear|radial)Gradient>/;
+/**
+ * The pen alone (no tile). 'white' keeps the artwork as it is (the dark splash). 'ink' paints the body
+ * in the app's ink and the window in the paper colour #F4F1EA, so the window shows on the ink body
+ * (the paper splash). The soft coral cap stays on both.
+ */
 function penOnly(body) {
   let s = inner(PEN_SVG).replace(TILE_RE, '');
-  if (body === 'ink') s = s.replace(BODY_RE, '<linearGradient id="body" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#3A4452"/><stop offset=".55" stop-color="#1D232B"/><stop offset="1" stop-color="#12161B"/></linearGradient>');
+  if (body === 'ink') {
+    s = s.replace(BODY_RE, '<linearGradient id="body" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#3A4452"/><stop offset=".55" stop-color="#1D232B"/><stop offset="1" stop-color="#12161B"/></linearGradient>');
+    s = s.replace(WIN_RE, '<linearGradient id="win" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F4F1EA"/><stop offset="1" stop-color="#F4F1EA"/></linearGradient>');
+  }
   return s;
+}
+
+/** The tile alone (its gradient and glow, no pen): Android's adaptive background layer. */
+function tileOnly() {
+  const defs = (inner(PEN_SVG).match(/<defs>[\s\S]*?<\/defs>/) || [''])[0];
+  return defs + (inner(PEN_SVG).match(TILE_RE) || []).join('');
 }
 
 // The body map's half outline (src/ui/BodyMap.tsx), smoothed the same way.
@@ -136,7 +152,7 @@ async function assets() {
   await sharp(svg(safe(penOnly('white')))).resize(512, 512).png().toFile(A('android-icon-foreground.png'));
   const silhouette = penOnly('white').replace(/fill="url\(#[a-z]+\)"/g, 'fill="#FFFFFF"').replace(/fill="#FFC2A8"/g, 'fill="#FFFFFF"').replace(/ filter="url\(#sh\)"/, '');
   await sharp(svg(safe(silhouette))).resize(512, 512).png().toFile(A('android-icon-monochrome.png'));
-  await sharp({ create: { width: 512, height: 512, channels: 4, background: BLUE_TILE } }).png().toFile(A('android-icon-background.png'));
+  await sharp(svg(tileOnly())).resize(512, 512).png().toFile(A('android-icon-background.png'));
   await sharp(svg(body)).resize(48, 48).png().toFile(A('favicon.png'));
   await sharp(svg(body)).resize(512, 512).png().toFile(D('icon-512.png'));
   await sharp(svg(body)).resize(180, 180).flatten({ background: BLUE_TILE }).png().toFile(D('apple-touch-icon.png'));

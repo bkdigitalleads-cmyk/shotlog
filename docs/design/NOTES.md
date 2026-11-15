@@ -46,7 +46,7 @@ Looked at every render; fixed from that: "Due Thursday" wrapped beside the mini 
 
 The icon is the injector pen (picked Nov 15, 2026, replacing the figure). Four options are in `icon-options.png`, each big and at 60 and 40 px on a light and a dark wallpaper, drawn by `store/icon.js` (`node icon.js options`; `node icon.js` writes `assets/` and the website images). The pen itself lives in `store/icon-pen.svg`, so its artwork can be replaced in one step and everything redrawn from it.
 
-1. pen (picked): an injector pen seen whole, with no needle, turned 45 degrees. It has a white body with a dose window, a coral dose knob and lower half, on a solid blue tile. Why:
+1. pen (picked): an injector pen seen whole, with no needle, turned 45 degrees. It has a white body with a blue dose window and a soft coral cap, tip, neck and dose button, on a blue tile. Why:
    - It says injection at a glance, without a needle, a syringe or a pharmacy cross.
    - A solid blue tile stands out at small sizes and on both wallpapers; at 60 px it is still a white-and-coral pen on blue.
    - The coral cap gives it a second colour of its own, so it does not look like another blue health app.
@@ -54,9 +54,16 @@ The icon is the injector pen (picked Nov 15, 2026, replacing the figure). Four o
 3. rotation: four sites around a dotted circle, the next as the blue ring. Abstract; reads as a spinner or a dial.
 4. page: a ruled notebook page with the next line ringed. True to the concept, but it is any notes app at 60 px.
 
-The splash shows the pen alone, without the tile, at the size of the earlier mark: an ink body with the coral cap on the paper (`assets/splash-icon.png`), and the white body with the coral cap on the dark slate (`assets/splash-icon-dark.png`). Android: the white pen inside the safe zone on the blue, and a white silhouette for themed icons. Inside the app the icon appears once, in the trial's day-before notification on onboarding (`src/ui/AppMark.tsx`, re-rendered as `after/13-trial-reminder.png`).
+The splash shows the pen alone, without the tile, at the size of the earlier mark, with the soft coral cap on both: on the paper an ink body with a paper-coloured window (#F4F1EA) so the window shows (`assets/splash-icon.png`), and on the dark slate the white body with its blue window (`assets/splash-icon-dark.png`). Android: the gradient tile as the background layer (flat #2F4BCB as the background colour), the white pen inside the safe zone, and a white silhouette for themed icons. Inside the app the icon appears once, in the trial's day-before notification on onboarding (`src/ui/AppMark.tsx`, re-rendered as `after/13-trial-reminder.png`).
 
-The pen's shapes are Brian's artwork. Its gradients, shadow and tile colour were rebuilt here because the start of the SVG was cut off when it was sent; the tile uses the app's blue (#2747C9).
+The pen's shapes and colours are Brian's (Nov 15, 2026):
+- the tile: a gradient from #4263EE at the top left to #1C34A6 at the bottom right, with a white glow (opacity 0.13 fading to 0) centred 22% across and 16% down, radius 75%
+- the body: #FFFFFF to 0.55, then #D5DDFF across the pen's width
+- the cap, tip, neck and dose button: #FFC2A8 to 0.5, then #F39A7A
+- the window: #1B2F97 to #27409F, top to bottom, with the #FFC2A8 level and a white highlight at 0.55
+- a drop shadow on the pen: dx 26, dy 44, blur 24, #0B1650 at 0.34
+
+In the app (`AppMark`, `ICON_COLORS`) the tile is flat #2F4BCB at that small size, and there is no shadow.
 
 ## The report
 

@@ -21,7 +21,7 @@
     "android": {
       "package": "com.bwk.shotlog",
       "adaptiveIcon": {
-        "backgroundColor": "#2747C9",
+        "backgroundColor": "#2F4BCB",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
