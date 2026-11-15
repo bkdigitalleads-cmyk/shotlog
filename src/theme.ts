@@ -142,3 +142,6 @@ export const FONT_FILES = {
   [fonts.serif]: require('../assets/fonts/SourceSerif4_600SemiBold.ttf'),
   [fonts.serifRegular]: require('../assets/fonts/SourceSerif4_400Regular.ttf'),
 };
+
+/** The app icon's own colours (store/icon-pen.svg), for the few places the app draws its icon. Not UI tokens. */
+export const ICON_COLORS = { tile: '#2747C9', cap: '#F2714F', body: '#FFFFFF', bodyShade: '#DCE2EE', window: '#1F2840', level: '#FFC2A8' };

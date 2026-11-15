@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+<!-- Shot Log's icon: an injector pen (no needle) on a solid blue tile. The pen's shapes are Brian's
+     artwork as sent on Nov 15, 2026. The defs (gradients, shadow) and the tile colour were rebuilt
+     here because the start of the SVG was cut off in transit; paste the original over this file and
+     run `node store/icon.js options && node store/icon.js` to redraw everything from it. -->
+<defs>
+<linearGradient id="cap" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#FF9B7D"/><stop offset=".55" stop-color="#F2714F"/><stop offset="1" stop-color="#DA5838"/></linearGradient>
+<linearGradient id="body" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".55" stop-color="#F2F4F9"/><stop offset="1" stop-color="#D9DFEC"/></linearGradient>
+<linearGradient id="win" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2E3A57"/><stop offset="1" stop-color="#1A2135"/></linearGradient>
+<filter id="sh" x="-25%" y="-25%" width="150%" height="150%"><feDropShadow dx="0" dy="18" stdDeviation="22" flood-color="#0B1440" flood-opacity=".38"/></filter>
+</defs>
+<rect width="1024" height="1024" fill="#2747C9"/>
+<g filter="url(#sh)"><g transform="translate(512 512) rotate(45) scale(1.06) translate(-512 -512)"><rect x="488" y="140" width="48" height="96" fill="url(#cap)"/><rect x="450" y="56" width="124" height="98" rx="30" fill="url(#cap)"/><path d="M474 86h76M474 106h76M474 126h76" stroke="#000" stroke-opacity=".18" stroke-width="7" stroke-linecap="round"/><rect x="466" y="862" width="92" height="88" rx="28" fill="url(#cap)"/><rect x="420" y="204" width="184" height="676" rx="54" fill="url(#body)"/><path d="M420 600h184v226a54 54 0 0 1-54 54h-76a54 54 0 0 1-54-54z" fill="url(#cap)"/><rect x="420" y="596" width="184" height="9" fill="#000" fill-opacity=".14"/><rect x="470" y="292" width="84" height="196" rx="30" fill="url(#win)"/><rect x="484" y="398" width="56" height="76" rx="18" fill="#FFC2A8"/><rect x="486" y="310" width="12" height="62" rx="6" fill="#FFFFFF" fill-opacity=".55"/></g></g></svg>

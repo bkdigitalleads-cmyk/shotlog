@@ -363,7 +363,8 @@ test('identity: app.json and eas.json as the brief sets them, the push plugin la
   assert.equal(app.slug, 'shotlog');
   assert.equal(app.version, '1.0.0');
   assert.equal(app.ios.bundleIdentifier, 'com.bwk.shotlog');
-  assert.equal(app.ios.buildNumber, '1');
+  assert.equal(app.ios.buildNumber, '2');
+  assert.equal(app.android.adaptiveIcon.backgroundColor, '#2747C9');
   assert.equal(app.owner, 'bkdeveloper123');
   assert.equal(app.extra.eas.projectId, '0cdea6c0-e329-4f94-979a-5c9d8fdffc37');
   // The public RevenueCat SDK key: purchases run only when it starts with appl_ (src/purchases.ts).
