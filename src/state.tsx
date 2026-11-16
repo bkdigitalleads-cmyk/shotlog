@@ -3,6 +3,7 @@ import { AppState as RNAppState } from 'react-native';
 import { initPurchases, getIsPro, checkPro, onProChange } from './purchases';
 import { getFeelings, getIntake, getMeds, getShots, getWeights, kvAll, kvGet, kvSet } from './db';
 import { syncShotReminders, syncTrialReminder } from './reminder';
+import { checkPlanChange, onManageClosed, takeManagePending } from './plans';
 import { hasSandboxPro } from './testing';
 import { activeMeds, type ProFeature } from './gates';
 import { DEFAULT_REMINDER_MINUTES, effectiveMed } from './schedule';
@@ -182,27 +183,48 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // reloads the data, so a new day shows the right due line.
   useEffect(() => {
     if (!ready) return;
-    syncTrialReminder();
+    // A change made in Apple's Manage Subscriptions sheet (or one that took effect at a renewal while the
+    // app was closed): one short line, and the trial reminder kept in step with the active plan.
+    const planCheck = () => {
+      checkPlanChange().then((msg) => {
+        if (msg) say(msg);
+      });
+      syncTrialReminder();
+    };
+    planCheck();
     const unsubscribe = onProChange((v) => {
       setIsPro(v);
       hasSandboxPro().then(setSandbox);
     });
+    // The sheet's promise may settle when it appears rather than when it closes, so it does not clear the
+    // pending flag: the next return to the foreground still checks. Checking twice is harmless (same baseline).
+    const unManage = onManageClosed(() => {
+      checkPro().then((v) => {
+        if (v !== null) setIsPro(v);
+      });
+      planCheck();
+    });
     let wasBackground = false;
     const sub = RNAppState.addEventListener('change', (s) => {
       if (s === 'background') wasBackground = true;
-      if (s !== 'active' || !wasBackground) return;
+      if (s !== 'active') return;
+      // Back from the background, or from Apple's sheet when it showed over the app (inactive, then active).
+      const fromManage = takeManagePending();
+      if (!wasBackground && !fromManage) return;
+      const back = wasBackground;
       wasBackground = false;
       checkPro().then((v) => {
         if (v !== null) setIsPro(v);
       });
-      syncTrialReminder();
-      refresh();
+      planCheck();
+      if (back) refresh();
     });
     return () => {
       unsubscribe();
+      unManage();
       sub.remove();
     };
-  }, [ready, refresh]);
+  }, [ready, refresh, say]);
 
   const updateSettings = useCallback(async (patch: Partial<Settings>) => {
     const next = { ...settingsRef.current, ...patch };

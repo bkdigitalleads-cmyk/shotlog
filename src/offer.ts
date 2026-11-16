@@ -120,3 +120,43 @@ export function proRows(s: { isPro: boolean; ownsLifetime: boolean; activeSubscr
 export function subscriptionsToCancel(activeSubscriptions: string[], renewing: (id: string) => boolean, lifetimeId: string = PRODUCTS.lifetime): string[] {
   return activeSubscriptions.filter((id) => id !== lifetimeId && renewing(id));
 }
+
+/** How Pro is held right now: the product behind the pro entitlement, whether it renews, and its period type ('TRIAL', 'NORMAL', ...). */
+export interface PlanSnapshot {
+  product: string | null;
+  willRenew: boolean;
+  periodType: string | null;
+}
+
+/** "Weekly", "Yearly", "Lifetime", or null for anything else. */
+export function planName(product: string | null): string | null {
+  return product === PRODUCTS.weekly ? 'Weekly' : product === PRODUCTS.yearly ? 'Yearly' : product === PRODUCTS.lifetime ? 'Lifetime' : null;
+}
+
+/**
+ * The one short line to show after a change made in Apple's Manage
+ * Subscriptions sheet (or one that took effect at a renewal while the app
+ * was closed), or null for nothing to say:
+ *  - weekly to yearly or back: "Your plan is now Yearly."
+ *  - the same plan stopped renewing: "Your subscription will not renew."
+ *  - the same plan renews again: "Your subscription will renew again."
+ * Nothing when either side is unknown, for a purchase or an ending (the
+ * purchase alerts and the paywall cover those), or for lifetime (its own
+ * message runs after that purchase).
+ */
+export function planChangeMessage(before: PlanSnapshot | null, after: PlanSnapshot | null): string | null {
+  if (!before || !after || !before.product || !after.product) return null;
+  if (before.product === PRODUCTS.lifetime || after.product === PRODUCTS.lifetime) return null;
+  if (before.product !== after.product) {
+    const name = planName(after.product);
+    return name ? `Your plan is now ${name}.` : null;
+  }
+  if (before.willRenew && !after.willRenew) return 'Your subscription will not renew.';
+  if (!before.willRenew && after.willRenew) return 'Your subscription will renew again.';
+  return null;
+}
+
+/** The trial's day-before reminder stays only while the weekly trial is the active plan and will renew. */
+export function trialReminderWanted(s: PlanSnapshot | null): boolean {
+  return s != null && s.product === PRODUCTS.weekly && s.periodType === 'TRIAL' && s.willRenew;
+}

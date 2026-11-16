@@ -14,7 +14,8 @@ const Purchases = {
     const byId = Object.fromEntries(subs.map((id) => [id, { willRenew: true, isActive: true }]));
     const owned = [...subs, ...(sc.lifetime ? ['shot_pro_lifetime'] : [])];
     return {
-      entitlements: { active: pro() ? { pro: { periodType: 'NORMAL', willRenew: true, isSandbox: false } } : {} },
+      // scenario.plan: the entitlement's product, renewal and period type (for the plan-change toast).
+      entitlements: { active: pro() ? { pro: { productIdentifier: 'shot_pro_yearly', periodType: 'NORMAL', willRenew: true, isSandbox: false, ...(sc.plan || {}) } } : {} },
       activeSubscriptions: subs,
       subscriptionsByProductIdentifier: byId,
       allPurchasedProductIdentifiers: owned,

@@ -1,7 +1,6 @@
 import Constants from 'expo-constants';
 import React, { useRef, useState } from 'react';
 import { Alert, Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme, space, tabular, type } from '../theme';
 import { useApp } from '../state';
 import { deleteAllData, kvSet } from '../db';
@@ -13,7 +12,7 @@ import { shareCsv } from '../exporting';
 import { gate } from '../gates';
 import { PRIVACY_URL, SUPPORT_EMAIL, SUPPORT_URL, TERMS_URL } from '../links';
 import type { WeightUnit } from '../model';
-import { Choice, Eyebrow, Field, ProMark, Row, Rows, SwitchRow, Tag, Tags, TopBar } from '../ui/Kit';
+import { Choice, Eyebrow, Field, PageTitle, ProMark, Row, Rows, SwitchRow, Tag, Tags } from '../ui/Kit';
 import When from '../ui/When';
 
 /** The medical line, the same here, in the App Review note and on the website. */
@@ -27,9 +26,8 @@ export interface SettingsSlots {
   testing?: (open: boolean) => React.ReactNode;
 }
 
-export default function SettingsScreen({ onBack, onMeds, slots = {} }: { onBack: () => void; onMeds: () => void; slots?: SettingsSlots }) {
+export default function SettingsScreen({ onMeds, slots = {} }: { onMeds: () => void; slots?: SettingsSlots }) {
   const theme = useTheme();
-  const insets = useSafeAreaInsets();
   const { settings, updateSettings, meds, shots, weights, feelings, isPro, showPaywall, refresh, testBuild, say } = useApp();
   const u = settings.weightUnit;
   // Test builds only: seven taps on the version line open the testing tools.
@@ -102,8 +100,8 @@ export default function SettingsScreen({ onBack, onMeds, slots = {} }: { onBack:
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.bg }}>
-      <TopBar theme={theme} title="Settings" back={{ label: 'Back', onPress: onBack }} />
-      <ScrollView contentContainerStyle={[styles.page, { paddingBottom: insets.bottom + space.xxl }]}>
+      <PageTitle theme={theme} title="Settings" />
+      <ScrollView contentContainerStyle={styles.page}>
         {slots.pro}
 
         <View>
@@ -236,7 +234,7 @@ export async function resetFirstRun(): Promise<void> {
 }
 
 const styles = StyleSheet.create({
-  page: { padding: space.l, gap: space.xxl },
+  page: { paddingHorizontal: space.l, paddingTop: space.s, paddingBottom: space.xxl, gap: space.xxl },
   inset: { paddingHorizontal: space.l, paddingVertical: space.s },
   note: { marginTop: space.s },
   version: { marginTop: space.l, paddingVertical: space.s },

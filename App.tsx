@@ -27,8 +27,8 @@ import Welcome, { FirstMedStep, TrackStep, TrialSteps, trialOffer } from './src/
 import TabRail, { Tab } from './src/ui/TabRail';
 import { Eyebrow, Row, Rows, SwitchRow, Toast } from './src/ui/Kit';
 
-/** A screen over the tabs. */
-type Over = 'settings' | 'meds' | null;
+/** A screen over the tabs: My medications (from Today or Settings; Back returns to that tab). */
+type Over = 'meds' | null;
 
 function Shell() {
   const theme = useTheme();
@@ -37,7 +37,6 @@ function Shell() {
   const { ready, notice, say, shots, isPro, setIsPro, paywall, paywallThisLaunch, showPaywall } = app;
   const [tab, setTab] = useState<Tab>('today');
   const [over, setOver] = useState<Over>(null);
-  const [overFrom, setOverFrom] = useState<Over>(null);
   const [onboarded, setOnboarded] = useState<boolean | null>(null);
   // New installs: three value screens, what you are tracking, the first medication, then Home.
   const [step, setStep] = useState<'welcome' | 'track' | 'med'>('welcome');
@@ -163,18 +162,14 @@ function Shell() {
     );
   }
 
-  const openMeds = (from: Over) => {
-    setOverFrom(from);
-    setOver('meds');
-  };
+  const openMeds = () => setOver('meds');
 
   let body: React.ReactNode;
-  if (over === 'meds') body = <MedsScreen onBack={() => setOver(overFrom === 'settings' ? 'settings' : null)} />;
-  else if (over === 'settings')
+  if (over === 'meds') body = <MedsScreen onBack={() => setOver(null)} />;
+  else if (tab === 'settings')
     body = (
       <SettingsScreen
-        onBack={() => setOver(null)}
-        onMeds={() => openMeds('settings')}
+        onMeds={openMeds}
         slots={{
           pro: <ProSection />,
           testing: (open) =>
@@ -199,6 +194,7 @@ function Shell() {
                     onPress={async () => {
                       await kvSet(ONBOARDED_KEY, '0');
                       setOver(null);
+                      setTab('today');
                       setStep('welcome');
                       setOnboarded(false);
                     }}
@@ -213,8 +209,7 @@ function Shell() {
     body = (
       <Today
         onLogShot={(medId) => setLogShot({ shot: null, medId })}
-        onMeds={() => openMeds(null)}
-        onSettings={() => setOver('settings')}
+        onMeds={openMeds}
         onWeight={() => setWeight({ entry: null })}
         onFeel={() => setFeel({ entry: null })}
       />

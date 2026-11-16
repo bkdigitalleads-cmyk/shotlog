@@ -255,6 +255,33 @@ test('Settings Pro rows: Switch to lifetime for subscribers without lifetime; Ma
   assert.deepEqual(rows({ activeSubscriptions: ['shot_pro_lifetime'] }), { switchToLifetime: false, manageSubscription: true });
 });
 
+test('plan changes from Apple\'s sheet: one short line, and the trial reminder follows the active plan', () => {
+  const snap = (product, willRenew = true, periodType = 'NORMAL') => ({ product, willRenew, periodType });
+  // Brian's case: Weekly (here in its trial), then Yearly in Manage subscription.
+  assert.equal(O.planChangeMessage(snap('shot_pro_weekly', true, 'TRIAL'), snap('shot_pro_yearly')), 'Your plan is now Yearly.');
+  assert.equal(O.planChangeMessage(snap('shot_pro_yearly'), snap('shot_pro_weekly')), 'Your plan is now Weekly.');
+  // Cancelled, and turned back on.
+  assert.equal(O.planChangeMessage(snap('shot_pro_weekly'), snap('shot_pro_weekly', false)), 'Your subscription will not renew.');
+  assert.equal(O.planChangeMessage(snap('shot_pro_yearly', false), snap('shot_pro_yearly', true)), 'Your subscription will renew again.');
+  // Nothing changed, nothing to say; a trial that turned into the paid period of the same plan is not a change.
+  assert.equal(O.planChangeMessage(snap('shot_pro_yearly'), snap('shot_pro_yearly')), null);
+  assert.equal(O.planChangeMessage(snap('shot_pro_weekly', true, 'TRIAL'), snap('shot_pro_weekly')), null);
+  // Unknown, a first purchase, an ending, or lifetime: other messages cover these.
+  assert.equal(O.planChangeMessage(null, snap('shot_pro_yearly')), null);
+  assert.equal(O.planChangeMessage(snap('shot_pro_yearly'), null), null);
+  assert.equal(O.planChangeMessage(snap(null, false, null), snap('shot_pro_yearly')), null);
+  assert.equal(O.planChangeMessage(snap('shot_pro_yearly'), snap(null, false, null)), null);
+  assert.equal(O.planChangeMessage(snap('shot_pro_weekly'), snap('shot_pro_lifetime', false)), null);
+  assert.equal(O.planName('shot_pro_yearly'), 'Yearly');
+  assert.equal(O.planName('something_else'), null);
+  // The day-before reminder stays only while the weekly trial is active and renews.
+  assert.equal(O.trialReminderWanted(snap('shot_pro_weekly', true, 'TRIAL')), true);
+  assert.equal(O.trialReminderWanted(snap('shot_pro_yearly', true, 'NORMAL')), false); // switched to Yearly
+  assert.equal(O.trialReminderWanted(snap('shot_pro_weekly', false, 'TRIAL')), false); // trial cancelled
+  assert.equal(O.trialReminderWanted(snap('shot_pro_weekly', true, 'NORMAL')), false); // trial over
+  assert.equal(O.trialReminderWanted(null), false);
+});
+
 // ---------- first run and paywall timing ----------
 
 test('paywall once: nothing before the first shot, then once ever, never for Pro', () => {
