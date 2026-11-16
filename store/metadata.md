@@ -86,7 +86,7 @@ Every content question is None, except:
 Same reasoning as Migraine Log: the honest answer and 13+ is what we recommend; ask Brian before choosing.
 
 ## App Privacy (nutrition label)
-Data Not Collected. Everything the person logs stays in the app's storage on the device and is never uploaded; there is no account and no analytics. RevenueCat validates purchases with an anonymous app user id and purchase history; answer the purchase questions the same way as for the other apps.
+As set in App Store Connect (Nov 16, 2026): Purchases (purchase history), used for App Functionality, not linked to identity, not used for tracking, because RevenueCat stores the purchase history. Nothing else is collected: everything the person logs stays in the app's storage on the device and is never uploaded; there is no account and no analytics. RevenueCat validates purchases with an anonymous app user id and that purchase history. The privacy policy (docs/privacy.html) says the same.
 
 ## Pricing and RevenueCat
 - Subscription group "Shot Log Pro".
