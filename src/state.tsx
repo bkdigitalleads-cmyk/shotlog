@@ -3,10 +3,12 @@ import { AppState as RNAppState } from 'react-native';
 import { initPurchases, getIsPro, checkPro, onProChange } from './purchases';
 import { getFeelings, getIntake, getMeds, getShots, getWeights, kvAll, kvGet, kvSet } from './db';
 import { syncShotReminders, syncTrialReminder } from './reminder';
+import { checkPlanChange, onManageClosed, takeManagePending } from './plans';
 import { hasSandboxPro } from './testing';
 import { activeMeds, type ProFeature } from './gates';
-import { DEFAULT_REMINDER_MINUTES } from './schedule';
+import { DEFAULT_REMINDER_MINUTES, effectiveMed } from './schedule';
 import type { FeelingEntry, Intake, Med, Shot, Track, Weight, WeightUnit } from './model';
+import type { PlanType } from './offer';
 
 export interface Settings {
   /** "What are you tracking?" Words only. */
@@ -74,13 +76,15 @@ export function parseSettings(rows: Record<string, string>): Settings {
   };
 }
 
-/** Why the in-app paywall opened; it changes one line on it. 'pro' is the general one. */
-export type PaywallReason = ProFeature | 'pro';
+/** Why the in-app paywall opened; it changes one line on it. 'pro' is the general one; 'lifetime' is Switch to lifetime. */
+export type PaywallReason = ProFeature | 'pro' | 'lifetime';
 
 export interface PaywallRequest {
   reason: PaywallReason;
   /** The onboarding paywall: weekly with the trial preselected, X after 3 seconds. */
   onboarding: boolean;
+  /** Only this plan (Switch to lifetime shows only Lifetime). */
+  only?: PlanType;
 }
 
 interface AppState {
@@ -94,7 +98,7 @@ interface AppState {
   setActFree: (v: boolean) => Promise<void>;
   paywall: PaywallRequest | null;
   /** Opens the paywall. A tap on something Pro always opens it. */
-  showPaywall: (reason: PaywallReason, onboarding?: boolean) => void;
+  showPaywall: (reason: PaywallReason, onboarding?: boolean, only?: PlanType) => void;
   hidePaywall: () => void;
   /** True once any paywall has shown in this launch (the app never opens a second one on its own). */
   paywallThisLaunch: boolean;
@@ -125,7 +129,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [paywall, setPaywall] = useState<PaywallRequest | null>(null);
   const [paywallThisLaunch, setPaywallThisLaunch] = useState(false);
   const [ready, setReady] = useState(false);
-  const [meds, setMeds] = useState<Med[]>([]);
+  const [storedMeds, setMeds] = useState<Med[]>([]);
   const [shots, setShots] = useState<Shot[]>([]);
   const [weights, setWeights] = useState<Weight[]>([]);
   const [feelings, setFeelings] = useState<FeelingEntry[]>([]);
@@ -179,27 +183,48 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // reloads the data, so a new day shows the right due line.
   useEffect(() => {
     if (!ready) return;
-    syncTrialReminder();
+    // A change made in Apple's Manage Subscriptions sheet (or one that took effect at a renewal while the
+    // app was closed): one short line, and the trial reminder kept in step with the active plan.
+    const planCheck = () => {
+      checkPlanChange().then((msg) => {
+        if (msg) say(msg);
+      });
+      syncTrialReminder();
+    };
+    planCheck();
     const unsubscribe = onProChange((v) => {
       setIsPro(v);
       hasSandboxPro().then(setSandbox);
     });
+    // The sheet's promise may settle when it appears rather than when it closes, so it does not clear the
+    // pending flag: the next return to the foreground still checks. Checking twice is harmless (same baseline).
+    const unManage = onManageClosed(() => {
+      checkPro().then((v) => {
+        if (v !== null) setIsPro(v);
+      });
+      planCheck();
+    });
     let wasBackground = false;
     const sub = RNAppState.addEventListener('change', (s) => {
       if (s === 'background') wasBackground = true;
-      if (s !== 'active' || !wasBackground) return;
+      if (s !== 'active') return;
+      // Back from the background, or from Apple's sheet when it showed over the app (inactive, then active).
+      const fromManage = takeManagePending();
+      if (!wasBackground && !fromManage) return;
+      const back = wasBackground;
       wasBackground = false;
       checkPro().then((v) => {
         if (v !== null) setIsPro(v);
       });
-      syncTrialReminder();
-      refresh();
+      planCheck();
+      if (back) refresh();
     });
     return () => {
       unsubscribe();
+      unManage();
       sub.remove();
     };
-  }, [ready, refresh]);
+  }, [ready, refresh, say]);
 
   const updateSettings = useCallback(async (patch: Partial<Settings>) => {
     const next = { ...settingsRef.current, ...patch };
@@ -224,6 +249,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   );
 
   const isPro = storePro && !(testBuild && actFree);
+  // Each medication as it really started: never later than its earliest logged shot (also for data saved before 1.0.0 build 3).
+  const meds = useMemo(() => storedMeds.map((m) => effectiveMed(m, shots)), [storedMeds, shots]);
   const active = useMemo(() => activeMeds(meds, isPro), [meds, isPro]);
 
   // Reminders follow the schedule: rescheduled whenever shots, medications, Pro or the settings change.
@@ -232,9 +259,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     syncShotReminders(active, shots, settings).catch(() => {});
   }, [ready, active, shots, settings]);
 
-  const showPaywall = useCallback((reason: PaywallReason, onboarding = false) => {
+  const showPaywall = useCallback((reason: PaywallReason, onboarding = false, only?: PlanType) => {
     setPaywallThisLaunch(true);
-    setPaywall({ reason, onboarding });
+    setPaywall({ reason, onboarding, only });
   }, []);
 
   const value = useMemo<AppState>(

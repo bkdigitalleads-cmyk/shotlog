@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useTheme, radius, space, tabular, type, Theme } from '../theme';
 import { useApp } from '../state';
 import { addIntake } from '../db';
@@ -10,7 +10,7 @@ import { daysSinceShot, fmt1, intakeOn, latestWeight, progress, sinceLabel, wate
 import { feelingLabel, intakeSteps, levelLabel, waterUnit } from '../labels';
 import { gate } from '../gates';
 import type { Med } from '../model';
-import { Button, Eyebrow, GlyphButton, Leaf, MainAction, PageTitle, ProMark, Row, Rows, Tap } from '../ui/Kit';
+import { Button, Eyebrow, Leaf, MainAction, PageTitle, ProMark, Row, Rows, Tap } from '../ui/Kit';
 import BodyMap from '../ui/BodyMap';
 import Glyph from '../ui/Glyph';
 import { soonestMed } from './LogShot';
@@ -24,17 +24,18 @@ import { tick } from '../ui/motion';
 export default function Today({
   onLogShot,
   onMeds,
-  onSettings,
   onWeight,
   onFeel,
 }: {
   onLogShot: (medId: number | null) => void;
   onMeds: () => void;
-  onSettings: () => void;
   onWeight: () => void;
   onFeel: () => void;
 }) {
   const theme = useTheme();
+  // The mini map is narrower on 320 pt phones, so a medication name keeps its line.
+  const { width: screenW } = useWindowDimensions();
+  const miniMap = screenW < 375 ? 112 : 150;
   const { active, shots, weights, feelings, settings, isPro, intake, showPaywall, refresh } = useApp();
   const now = Date.now();
   const today = dayKey(now);
@@ -58,7 +59,7 @@ export default function Today({
 
   return (
     <ScrollView contentContainerStyle={styles.page}>
-      <PageTitle theme={theme} title="Today" sub={`${weekdayName(today)}, ${shortDate(today)}`} right={<GlyphButton theme={theme} glyph="sliders" label="Settings" onPress={onSettings} />} />
+      <PageTitle theme={theme} title="Today" sub={`${weekdayName(today)}, ${shortDate(today)}`} />
 
       <View style={styles.body}>
         {med && dueLine ? (
@@ -77,7 +78,7 @@ export default function Today({
                 <Text style={[type.small, { color: theme.inkSoft }]}>{scheduleLabel(med.schedule)}</Text>
               </Tap>
               <View style={styles.mini} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
-                <BodyMap theme={theme} width={150} last={lastSite} next={next} caption={false} />
+                <BodyMap theme={theme} width={miniMap} last={lastSite} next={next} caption={false} />
               </View>
             </View>
             <Text style={[type.small, styles.rotation, { color: theme.inkSoft, borderTopColor: theme.rule }]}>{rotationLine(lastSite, next)}</Text>

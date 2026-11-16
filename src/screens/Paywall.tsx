@@ -7,7 +7,7 @@ import { useApp, PaywallReason } from '../state';
 import { getOffering, purchasePackage, restorePurchases, isBillingAvailable } from '../purchases';
 import { getTrialEligibleIds, trialLabel } from '../trial';
 import { cancelTrialReminder, scheduleTrialReminderIfTrial } from '../reminder';
-import { planOrder, planTitle, planTypeOf, preselect, showsTrial, PlanType } from '../offer';
+import { planTitle, planTypeOf, plansShown, preselect, showsTrial, PlanType } from '../offer';
 import { ONBOARDING_CLOSE_DELAY_MS } from '../flow';
 import { afterLifetimePurchase } from '../plans';
 import { PRIVACY_URL, TERMS_URL } from '../links';
@@ -26,6 +26,7 @@ const REASON: Record<PaywallReason, { title: string; line: string }> = {
   csv: { title: 'Everything in a spreadsheet.', line: 'Every shot, weight and side effect, one row each.' },
   history: { title: 'Your whole history.', line: 'Every shot and entry past the last 30 days, kept on this iPhone.' },
   pro: { title: 'Shot Log Pro.', line: 'A stack of medications, trends and patterns, the report for your prescriber, and your whole history.' },
+  lifetime: { title: 'Pay once, keep Pro.', line: 'Lifetime is one payment for Shot Log Pro. Afterwards, cancel your subscription in Apple’s subscriptions page so it stops renewing.' },
 };
 
 const typeOf = (p: PurchasesPackage): PlanType | null => planTypeOf(p.packageType);
@@ -38,7 +39,11 @@ const typeOf = (p: PurchasesPackage): PlanType | null => planTypeOf(p.packageTyp
  *    preselected with its trial wording and "No payment now" when this
  *    Apple ID can get the trial; the X appears after 3 seconds, every time
  *    this kind opens.
- *  - in-app: "Yearly, best value" first and preselected; no trial wording.
+ *  - in-app: "Yearly, best value" first and preselected. The Weekly row
+ *    still names the trial (and "No payment now" shows under it when it is
+ *    picked) whenever this Apple ID can get it, because Apple grants the
+ *    trial wherever weekly is bought.
+ *  - Switch to lifetime (Settings, for subscribers): only the Lifetime plan.
  * Prices and trial lengths always come from StoreKit. Logging a shot is
  * never behind this.
  */
@@ -51,6 +56,7 @@ export default function PaywallModal() {
   const visible = paywall != null;
   const onboarding = paywall?.onboarding ?? false;
   const reason: PaywallReason = paywall?.reason ?? 'pro';
+  const only = paywall?.only ?? null;
   const [offering, setOffering] = useState<PurchasesOffering | null>(null);
   const [selected, setSelected] = useState<PurchasesPackage | null>(null);
   const [trialEligible, setTrialEligible] = useState<Set<string>>(new Set());
@@ -75,11 +81,11 @@ export default function PaywallModal() {
       setOffering(off);
       setTrialEligible(await getTrialEligibleIds(off?.availablePackages ?? []));
       const pkgs = (off?.availablePackages ?? []).filter((p) => typeOf(p) != null);
-      const pick = preselect(pkgs.map((p) => typeOf(p) as string), onboarding);
+      const pick = preselect(pkgs.map((p) => typeOf(p) as string), onboarding, only);
       setSelected(pkgs.find((p) => typeOf(p) === pick) ?? null);
       setLoading(false);
     })();
-  }, [visible, onboarding]);
+  }, [visible, onboarding, only]);
 
   const buy = async () => {
     if (!selected) return;
@@ -121,15 +127,16 @@ export default function PaywallModal() {
     }
   };
 
-  const order = planOrder(onboarding);
-  const packages = [...(offering?.availablePackages ?? [])]
-    .filter((p) => typeOf(p) != null)
-    .sort((a, b) => order.indexOf(typeOf(a) as PlanType) - order.indexOf(typeOf(b) as PlanType));
+  const all = (offering?.availablePackages ?? []).filter((p) => typeOf(p) != null);
+  const order = plansShown(all.map((p) => typeOf(p) as PlanType), onboarding, only);
+  const packages = all.filter((p) => order.includes(typeOf(p) as PlanType)).sort((a, b) => order.indexOf(typeOf(a) as PlanType) - order.indexOf(typeOf(b) as PlanType));
   const weeklyPkg = packages.find((p) => typeOf(p) === 'WEEKLY');
   const yearlyPkg = packages.find((p) => typeOf(p) === 'ANNUAL');
   const lifetimePkg = packages.find((p) => typeOf(p) === 'LIFETIME');
   const weeklyTrial = trialLabel(weeklyPkg, trialEligible);
-  const shownTrial = showsTrial('WEEKLY', onboarding, weeklyTrial);
+  // The trial on the weekly plan and in the legal lines, on every paywall that lists weekly; the headline names it on the onboarding paywall only.
+  const shownTrial = showsTrial('WEEKLY', weeklyTrial);
+  const headlineTrial = onboarding ? shownTrial : null;
 
   const money = (n: number, cur?: string) => n.toLocaleString(undefined, { style: 'currency', currency: cur ?? 'USD' });
   const yearlyPerWeek = yearlyPkg?.product.price ? `${money(yearlyPkg.product.price / 52, yearlyPkg.product.currencyCode)} a week` : null;
@@ -149,7 +156,7 @@ export default function PaywallModal() {
     ' Payment is charged to your Apple ID. Cancel a subscription anytime in your Apple ID settings at least 24 hours before the period ends.';
 
   const copy = REASON[reason];
-  const headline = shownTrial ? `${copy.title} ${shownTrial[0].toUpperCase()}${shownTrial.slice(1)} first.` : copy.title;
+  const headline = headlineTrial ? `${copy.title} ${headlineTrial[0].toUpperCase()}${headlineTrial.slice(1)} first.` : copy.title;
 
   return (
     <Modal visible={visible} animationType={MODAL_ANIMATION} presentationStyle="fullScreen" onRequestClose={() => canClose && hidePaywall()}>
@@ -176,7 +183,7 @@ export default function PaywallModal() {
                 const t = typeOf(p) as PlanType;
                 const on = selected?.identifier === p.identifier;
                 const title = planTitle(t, onboarding);
-                const trial = showsTrial(t, onboarding, weeklyTrial);
+                const trial = showsTrial(t, weeklyTrial);
                 // 3.1.2(c) on the row itself: the trial length, then the price after it.
                 const line =
                   t === 'ANNUAL'
@@ -218,7 +225,7 @@ export default function PaywallModal() {
         <View style={[styles.bottom, { borderTopColor: theme.rule, paddingBottom: Math.max(insets.bottom, space.m) }]}>
           {/* The button says Continue, never Subscribe. */}
           <Button theme={theme} live label={purchasing ? 'One moment' : 'Continue'} onPress={buy} disabled={purchasing || !selected || loading} />
-          {selected && showsTrial(typeOf(selected) as PlanType, onboarding, trialLabel(selected, trialEligible)) ? (
+          {selected && showsTrial(typeOf(selected) as PlanType, trialLabel(selected, trialEligible)) ? (
             <View style={styles.checkLine}>
               <Glyph name="check" size={18} color={theme.ink} weight={2.2} />
               <Text style={[type.body, styles.semi, { color: theme.ink }]}>No payment now</Text>

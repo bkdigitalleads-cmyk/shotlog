@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
@@ -10,9 +10,6 @@ import { onSnoozeTapped, snooze } from './src/reminder';
 import { maybeRequestReview, recordInstallDay, setReviewGuard } from './src/reviews';
 import { autoPaywallAllowed, firstFlowStep, secondShotMet } from './src/flow';
 import { FIRST_FLOW_KEY, SECOND_CHANCE_KEY, takeSecondChance } from './src/firstRun';
-import { restorePurchases, isBillingAvailable } from './src/purchases';
-import { cancelTrialReminder } from './src/reminder';
-import { openManageSubscriptions } from './src/plans';
 import { addDays, dayKey, timeLabel } from './src/days';
 import type { FeelingEntry, Shot, Weight } from './src/model';
 import Today from './src/screens/Today';
@@ -24,13 +21,14 @@ import { FeelTray, WeightTray, EntryRequest } from './src/screens/Entries';
 import MedsScreen from './src/screens/Meds';
 import SettingsScreen, { resetFirstRun } from './src/screens/Settings';
 import ReminderAsk from './src/screens/ReminderAsk';
+import ProSection from './src/screens/ProSection';
 import PaywallModal from './src/screens/Paywall';
 import Welcome, { FirstMedStep, TrackStep, TrialSteps, trialOffer } from './src/screens/Welcome';
 import TabRail, { Tab } from './src/ui/TabRail';
 import { Eyebrow, Row, Rows, SwitchRow, Toast } from './src/ui/Kit';
 
-/** A screen over the tabs. */
-type Over = 'settings' | 'meds' | null;
+/** A screen over the tabs: My medications (from Today or Settings; Back returns to that tab). */
+type Over = 'meds' | null;
 
 function Shell() {
   const theme = useTheme();
@@ -39,7 +37,6 @@ function Shell() {
   const { ready, notice, say, shots, isPro, setIsPro, paywall, paywallThisLaunch, showPaywall } = app;
   const [tab, setTab] = useState<Tab>('today');
   const [over, setOver] = useState<Over>(null);
-  const [overFrom, setOverFrom] = useState<Over>(null);
   const [onboarded, setOnboarded] = useState<boolean | null>(null);
   // New installs: three value screens, what you are tracking, the first medication, then Home.
   const [step, setStep] = useState<'welcome' | 'track' | 'med'>('welcome');
@@ -165,46 +162,16 @@ function Shell() {
     );
   }
 
-  const openMeds = (from: Over) => {
-    setOverFrom(from);
-    setOver('meds');
-  };
-
-  const onRestore = async () => {
-    if (!isBillingAvailable()) return Alert.alert('The App Store is not answering', 'Try again in a minute.');
-    const res = await restorePurchases();
-    if (res.ok) {
-      cancelTrialReminder();
-      setIsPro(res.isPro);
-      Alert.alert(res.isPro ? 'Pro is back on' : 'Nothing to restore', res.isPro ? 'Everything is open again.' : 'This Apple ID has no Shot Log Pro purchase.');
-    } else Alert.alert('Restore did not work', res.error ?? 'Try once more.');
-  };
+  const openMeds = () => setOver('meds');
 
   let body: React.ReactNode;
-  if (over === 'meds') body = <MedsScreen onBack={() => setOver(overFrom === 'settings' ? 'settings' : null)} />;
-  else if (over === 'settings')
+  if (over === 'meds') body = <MedsScreen onBack={() => setOver(null)} />;
+  else if (tab === 'settings')
     body = (
       <SettingsScreen
-        onBack={() => setOver(null)}
-        onMeds={() => openMeds('settings')}
+        onMeds={openMeds}
         slots={{
-          pro: (
-            <View>
-              <Eyebrow theme={theme}>Shot Log Pro</Eyebrow>
-              <Rows theme={theme}>
-                <Row
-                  theme={theme}
-                  glyph="ring"
-                  label={isPro ? 'Pro is on' : 'Shot Log Pro'}
-                  sub={isPro ? 'Thank you. Everything is open.' : 'A stack, trends, the report and your whole history'}
-                  onPress={isPro ? undefined : () => showPaywall('pro')}
-                />
-                {isPro ? <Row theme={theme} label="Manage subscription" onPress={openManageSubscriptions} /> : null}
-                <Row theme={theme} label="Restore purchases" onPress={onRestore} />
-              </Rows>
-              <Text style={[type.small, { color: theme.inkSoft, marginTop: space.s }]}>Logging your shots is always free.</Text>
-            </View>
-          ),
+          pro: <ProSection />,
           testing: (open) =>
             open ? (
               <View>
@@ -227,6 +194,7 @@ function Shell() {
                     onPress={async () => {
                       await kvSet(ONBOARDED_KEY, '0');
                       setOver(null);
+                      setTab('today');
                       setStep('welcome');
                       setOnboarded(false);
                     }}
@@ -241,8 +209,7 @@ function Shell() {
     body = (
       <Today
         onLogShot={(medId) => setLogShot({ shot: null, medId })}
-        onMeds={() => openMeds(null)}
-        onSettings={() => setOver('settings')}
+        onMeds={openMeds}
         onWeight={() => setWeight({ entry: null })}
         onFeel={() => setFeel({ entry: null })}
       />

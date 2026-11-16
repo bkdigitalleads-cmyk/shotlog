@@ -47,9 +47,9 @@ export function planOrder(onboarding: boolean): PlanType[] {
   return onboarding ? ['WEEKLY', 'ANNUAL', 'LIFETIME'] : ['ANNUAL', 'WEEKLY', 'LIFETIME'];
 }
 
-/** The preselected plan among those the store returned. */
-export function preselect(available: string[], onboarding: boolean): PlanType | null {
-  for (const t of planOrder(onboarding)) if (available.includes(t)) return t;
+/** The preselected plan among those the store returned (the one plan, when the paywall shows only one). */
+export function preselect(available: string[], onboarding: boolean, only?: PlanType | null): PlanType | null {
+  for (const t of planOrder(onboarding)) if (available.includes(t) && (!only || t === only)) return t;
   return null;
 }
 
@@ -65,9 +65,20 @@ export function planTitle(t: PlanType, onboarding: boolean): string {
   return 'Weekly';
 }
 
-/** Trial wording only on the weekly plan of the onboarding paywall, and only when this Apple ID can get it. */
-export function showsTrial(t: PlanType, onboarding: boolean, trial: string | null): string | null {
-  return onboarding && t === 'WEEKLY' ? trial : null;
+/**
+ * Trial wording on the weekly plan, on every paywall, whenever StoreKit says
+ * this Apple ID can still get the trial (`trial` is then "3 days free", else
+ * null). Apple grants the trial wherever weekly is bought, so the plan row,
+ * the legal lines and "No payment now" always say so. (Until 1.0.0 build 3
+ * the in-app paywall left it out, and a buyer got a trial it never named.)
+ */
+export function showsTrial(t: PlanType, trial: string | null): string | null {
+  return t === 'WEEKLY' ? trial : null;
+}
+
+/** The plans a paywall lists, in its order: all of them, or only one (Switch to lifetime shows only Lifetime). */
+export function plansShown(available: PlanType[], onboarding: boolean, only?: PlanType | null): PlanType[] {
+  return planOrder(onboarding).filter((t) => available.includes(t) && (!only || t === only));
 }
 
 /** Whole percent saved by paying yearly instead of 52 weeks, or null when it is not a saving. */
@@ -88,6 +99,64 @@ export const PRODUCTS = { weekly: 'shot_pro_weekly', yearly: 'shot_pro_yearly', 
  * product ids with an active subscription; `willRenew` is false for one
  * already cancelled.
  */
+/**
+ * Which Pro rows Settings shows, from RevenueCat's customer info:
+ *  - "Switch to lifetime" (Pay once, then cancel the subscription): Pro is on
+ *    through an active subscription and lifetime is not owned. It opens the
+ *    paywall with only the Lifetime plan.
+ *  - "Manage subscription": Pro is on, except when lifetime is owned and no
+ *    subscription renews (then there is nothing to manage).
+ * `activeSubscriptions` is every active subscription product (renewing or
+ * cancelled but still running); `renewing` the ones that will renew.
+ */
+export function proRows(s: { isPro: boolean; ownsLifetime: boolean; activeSubscriptions: string[]; renewing: string[] }): { switchToLifetime: boolean; manageSubscription: boolean } {
+  const subscribed = s.activeSubscriptions.some((id) => id !== PRODUCTS.lifetime);
+  return {
+    switchToLifetime: s.isPro && subscribed && !s.ownsLifetime,
+    manageSubscription: s.isPro && !(s.ownsLifetime && s.renewing.length === 0),
+  };
+}
+
 export function subscriptionsToCancel(activeSubscriptions: string[], renewing: (id: string) => boolean, lifetimeId: string = PRODUCTS.lifetime): string[] {
   return activeSubscriptions.filter((id) => id !== lifetimeId && renewing(id));
+}
+
+/** How Pro is held right now: the product behind the pro entitlement, whether it renews, and its period type ('TRIAL', 'NORMAL', ...). */
+export interface PlanSnapshot {
+  product: string | null;
+  willRenew: boolean;
+  periodType: string | null;
+}
+
+/** "Weekly", "Yearly", "Lifetime", or null for anything else. */
+export function planName(product: string | null): string | null {
+  return product === PRODUCTS.weekly ? 'Weekly' : product === PRODUCTS.yearly ? 'Yearly' : product === PRODUCTS.lifetime ? 'Lifetime' : null;
+}
+
+/**
+ * The one short line to show after a change made in Apple's Manage
+ * Subscriptions sheet (or one that took effect at a renewal while the app
+ * was closed), or null for nothing to say:
+ *  - weekly to yearly or back: "Your plan is now Yearly."
+ *  - the same plan stopped renewing: "Your subscription will not renew."
+ *  - the same plan renews again: "Your subscription will renew again."
+ * Nothing when either side is unknown, for a purchase or an ending (the
+ * purchase alerts and the paywall cover those), or for lifetime (its own
+ * message runs after that purchase).
+ */
+export function planChangeMessage(before: PlanSnapshot | null, after: PlanSnapshot | null): string | null {
+  if (!before || !after || !before.product || !after.product) return null;
+  if (before.product === PRODUCTS.lifetime || after.product === PRODUCTS.lifetime) return null;
+  if (before.product !== after.product) {
+    const name = planName(after.product);
+    return name ? `Your plan is now ${name}.` : null;
+  }
+  if (before.willRenew && !after.willRenew) return 'Your subscription will not renew.';
+  if (!before.willRenew && after.willRenew) return 'Your subscription will renew again.';
+  return null;
+}
+
+/** The trial's day-before reminder stays only while the weekly trial is the active plan and will renew. */
+export function trialReminderWanted(s: PlanSnapshot | null): boolean {
+  return s != null && s.product === PRODUCTS.weekly && s.periodType === 'TRIAL' && s.willRenew;
 }

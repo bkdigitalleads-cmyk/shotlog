@@ -10,7 +10,7 @@
 import * as Notifications from 'expo-notifications';
 import Purchases from 'react-native-purchases';
 import { ENTITLEMENT_ID, isBillingAvailable } from './purchases';
-import { trialReminderAt } from './offer';
+import { trialReminderAt, trialReminderWanted } from './offer';
 import { medDueDay, reminderAt, SNOOZE_MS } from './schedule';
 import type { Med, Shot } from './model';
 
@@ -202,10 +202,19 @@ export async function cancelTrialReminder(): Promise<void> {
 }
 
 /**
- * Foreground check: drop the trial reminder once the trial is over, or has
- * been cancelled (it would no longer renew). An unknown answer leaves it alone.
+ * Foreground check: keep the trial reminder only while the weekly trial is
+ * the active plan and will renew (src/offer.ts trialReminderWanted). It is
+ * dropped once the trial is over, cancelled, or replaced by another plan in
+ * Apple's sheet (Weekly to Yearly). An unknown answer leaves it alone.
  */
 export async function syncTrialReminder(): Promise<void> {
-  const trial = await getTrialState();
-  if (trial && (!trial.active || !trial.willRenew)) await cancelTrialReminder();
+  if (!isBillingAvailable()) return;
+  try {
+    const info = await Purchases.getCustomerInfo();
+    const ent = info.entitlements.active[ENTITLEMENT_ID];
+    const snap = ent ? { product: ent.productIdentifier, willRenew: ent.willRenew, periodType: ent.periodType ?? null } : null;
+    if (!trialReminderWanted(snap)) await cancelTrialReminder();
+  } catch {
+    // unknown: leave it
+  }
 }

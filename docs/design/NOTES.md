@@ -32,12 +32,13 @@ Light by default. A proper dark mode follows the phone: the same notebook at nig
 - Home: `06-home-empty` (a medication, no shots: "Due today", "Pick a site on the map. The app learns your rotation as you go."), `07-home` (with history), `08-home-stack` (Pro: two medications, the soonest leads, the other below it with Log).
 - Log sheet: `09-log-sheet` (filled in: medication, dose, next site picked), `10-log-sheet-site` (the body map: last site dot, picked site, the rotation line).
 - The first-shot moment: `11-reminder-question`, `12-trial`, `13-trial-reminder`, `14-paywall-onboarding` (X visible after 3 seconds).
-- `15-paywall-in-app` (from Trends), `31-paywall-in-app-dark` (from Share PDF).
+- `15-paywall-in-app` (from Trends; Yearly preselected, the Weekly row names the trial when this Apple ID can get it), `35-paywall-in-app-weekly` (Weekly picked: "No payment now"), `31-paywall-in-app-dark` (from Share PDF), `34-paywall-lifetime` (Switch to lifetime: only the Lifetime plan).
 - `16-medications` (Pro stack), `17-medication` (the editor's dose history and Change the dose).
 - Insights: `18-weight-chart`, `19-patterns`, `20-site-history`.
 - `21-history`, `22-weight`, `23-how-i-feel`.
-- Report: `24-report`, `25-report-preview-free` (SAMPLE, one button to the paywall), `26-report-preview-pro`.
-- `27-settings`, `32-settings-private` (Your data, Help and About: store shot 6).
+- Report: `24-report`, `25-report-preview-free` (SAMPLE, one button to the paywall), `26-report-preview-pro`, `36-report-preview-shots` (Every shot, oldest first, as in the PDF).
+- `27-settings` (Settings is the fifth tab, with the sliders glyph; no Back bar), `32-settings-private` (Your data, Help and About: store shot 6), `33-settings-subscriber` (Pro through a yearly subscription: Switch to lifetime and Manage subscription), `39-plan-changed` (the toast after a change in Apple's sheet: "Your plan is now Yearly.").
+- At 320 pt wide (the smallest iPhone width): `37-today-320`, `38-settings-320`. The five tab labels fit; the mini body map on Today is narrower below 375 pt so the medication's name keeps its line.
 - Dark: `28-home-dark`, `29-log-sheet-dark`, `30-weight-chart-dark`.
 
 Looked at every render; fixed from that: "Due Thursday" wrapped beside the mini map (the due line now has the full width); the unit choice cut "units" (the amount field is now a fixed width); text fields squeezed their unit suffix; the weight line was too long with its goal; the trial reminder screen was empty (it now shows the notification it promises); shot guides in the weight chart were too busy (now faint, the ticks carry it); the site rotation mixed medications (a B12 shot in the arm moved a weekly shot's rotation), now each medication keeps its own.

@@ -13,7 +13,7 @@
  */
 import type { FeelingEntry, Med, Shot, Weight, WeightUnit } from './model';
 import { addDays, dayKey, shortDate, time24, timeLabel } from './days.ts';
-import { doseLabel, scheduleLabel } from './schedule.ts';
+import { doseLabel, effectiveMed, scheduleLabel } from './schedule.ts';
 import { siteLabel } from './sites.ts';
 import { FEELINGS, feelingLabel, levelLabel, waistUnit } from './labels.ts';
 import { changeSinceFirstShot, convertWeight, dailyWeights, fmt1, patterns, signed1, sinceShort, weeklyChange, type WeightPoint } from './insights.ts';
@@ -101,7 +101,9 @@ export function buildReport(input: {
   }).filter((c) => c.total > 0);
 
   const medIds = new Set(shots.map((s) => s.medId));
+  // First shot: the earlier of the start day and the earliest logged shot, with the first dose moved back with it.
   const meds = input.meds
+    .map((m) => effectiveMed(m, input.shots))
     .filter((m) => medIds.has(m.id) || m.startDay <= to)
     .map((m) => ({
       name: m.name,
@@ -183,9 +185,7 @@ export function reportHtml(r: ReportModel, opts: { sample?: boolean } = {}): str
   const feelRows = r.feelings.map((f) => `<tr><td>${e(f.label)}</td><td class="num">${f.mild}</td><td class="num">${f.moderate}</td><td class="num">${f.strong}</td><td class="num"><b>${f.total}</b></td></tr>`).join('');
   const sinceRow = r.byDaysSince.map((n) => `<td class="num">${n}</td>`).join('');
   const sinceHead = r.byDaysSince.map((_, i) => `<th class="num">${i === 0 ? 'Day of' : sinceShort(i)}</th>`).join('');
-  const shotRows = r.shots
-    .map((s) => `<tr><td>${e(s.date)}${s.later ? ' *' : ''}</td><td>${e(s.time)}</td><td>${e(s.med)}</td><td class="num">${e(s.dose)}</td><td>${e(s.site)}</td></tr>`)
-    .join('');
+  const shotRows = r.shots.map((s) => `<tr><td>${e(s.date)}${s.later ? ' *' : ''}</td><td>${e(s.time)}</td><td>${e(s.med)}</td><td class="num">${e(s.dose)}</td><td>${e(s.site)}</td></tr>`);
   return `<!doctype html><html><head><meta charset="utf-8"><title>Injection log</title><style>
   @page { margin: 16mm 14mm; }
   body { font-family: -apple-system, Helvetica, Arial, sans-serif; color: #111; font-size: 11pt; line-height: 1.35; position: relative; }
@@ -203,7 +203,10 @@ export function reportHtml(r: ReportModel, opts: { sample?: boolean } = {}): str
   .num { text-align: right; font-variant-numeric: tabular-nums; }
   tr { page-break-inside: avoid; }
   .foot { margin-top: 10pt; font-size: 9pt; color: #444; }
-  .break { page-break-before: always; }
+  h2 { page-break-after: avoid; break-after: avoid; }
+  .keep { page-break-inside: avoid; break-inside: avoid; }
+  table.shots { table-layout: fixed; }
+  table.shots + table.shots { margin-top: 0; }
   .wm { position: fixed; top: 35%; left: 0; right: 0; text-align: center; font-size: 110pt; color: rgba(0,0,0,0.08); transform: rotate(-24deg); }
   </style></head><body>
   ${opts.sample ? '<div class="wm">SAMPLE</div>' : ''}
@@ -225,15 +228,37 @@ export function reportHtml(r: ReportModel, opts: { sample?: boolean } = {}): str
   ${
     r.feelings.length
       ? `<table><tr><th>Logged as</th><th class="num">Mild</th><th class="num">Moderate</th><th class="num">Strong</th><th class="num">All</th></tr>${feelRows}</table>
-  <p class="soft" style="margin-top:8pt">By days since the last shot (counts):</p>
-  <table><tr>${sinceHead}</tr><tr>${sinceRow}</tr></table>`
+  <div class="keep"><p class="soft" style="margin-top:8pt">By days since the last shot (counts):</p>
+  <table><tr>${sinceHead}</tr><tr>${sinceRow}</tr></table></div>`
       : '<p class="soft">None logged in this range.</p>'
   }
   ${footer}
-  <h2 class="break">Every shot</h2>
-  ${r.shots.length ? `<table><tr><th>Date</th><th>Time</th><th>Medication</th><th class="num">Dose</th><th>Site</th></tr>${shotRows}</table>${r.shots.some((s) => s.later) ? '<p class="soft">* Entered later by the patient.</p>' : ''}` : '<p class="soft">No shots in this range.</p>'}
+  ${everyShot(shotRows, r.shots.some((s) => s.later))}
   ${footer}
   </body></html>`;
+}
+
+/** Rows kept on the same page as the Every shot heading, so the heading never ends a page alone. */
+export const SHOTS_KEPT_WITH_HEADING = 3;
+
+/**
+ * The Every shot section, oldest first. It follows on the same page when it
+ * fits: the heading and the first rows are one block that is never split
+ * (it moves to the next page only when it does not fit), and the rest of
+ * the rows continue in a second table with the same columns, breaking
+ * between rows only where a page is full.
+ */
+export function everyShot(rows: string[], anyLater: boolean): string {
+  if (rows.length === 0) return '<h2>Every shot</h2><p class="soft">No shots in this range.</p>';
+  const cols = '<colgroup><col style="width:19%"><col style="width:13%"><col style="width:32%"><col style="width:12%"><col style="width:24%"></colgroup>';
+  const head = '<thead><tr><th>Date</th><th>Time</th><th>Medication</th><th class="num">Dose</th><th>Site</th></tr></thead>';
+  const first = rows.slice(0, SHOTS_KEPT_WITH_HEADING).join('');
+  const rest = rows.slice(SHOTS_KEPT_WITH_HEADING).join('');
+  return (
+    `<div class="keep"><h2>Every shot</h2><table class="shots">${cols}${head}<tbody>${first}</tbody></table></div>` +
+    (rest ? `<table class="shots">${cols}<tbody>${rest}</tbody></table>` : '') +
+    (anyLater ? '<p class="soft">* Entered later by the patient.</p>' : '')
+  );
 }
 
 /** One CSV field, quoted when needed. */

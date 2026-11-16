@@ -43,7 +43,8 @@ export default function ReportPreview({
   const paperTheme: Theme = { ...lightTheme, chart: P.ink, rule: P.rule, inkSoft: P.soft, live: '#2747C9' };
   const u = model.unit;
   const pageW = Math.min(width, 560) - space.l * 2;
-  const shown = model.shots.slice(-14).reverse();
+  // Oldest first, as in the PDF: the latest 14 shots, with the count of earlier ones above them.
+  const shown = model.shots.slice(-14);
 
   const box = (n: string, l: string) => (
     <View style={[styles.box, { borderColor: P.rule }]} accessible accessibilityLabel={`${l}: ${n}`}>
@@ -114,6 +115,9 @@ export default function ReportPreview({
             <Text style={[styles.foot, { color: P.soft }]}>{REPORT_FOOTER}</Text>
 
             <Text style={[styles.h2, { color: P.ink, borderBottomColor: P.rule }]}>Every shot</Text>
+            {model.shots.length > shown.length ? (
+              <Text style={[styles.small, { color: P.soft, marginBottom: space.xs }]}>{`${model.shots.length - shown.length} earlier ${model.shots.length - shown.length === 1 ? 'shot is' : 'shots are'} in the PDF. The latest ${shown.length}, oldest first:`}</Text>
+            ) : null}
             {shown.map((s, i) => (
               <View key={i} style={[styles.tr, { borderBottomColor: P.rule }]}>
                 <Text style={[styles.cell, styles.date, { color: P.ink }, tabular]}>{s.date.replace(/, \d{4}$/, '')}</Text>
@@ -126,7 +130,6 @@ export default function ReportPreview({
                 </Text>
               </View>
             ))}
-            {model.shots.length > shown.length ? <Text style={[styles.small, { color: P.soft, marginTop: space.s }]}>{`And ${model.shots.length - shown.length} earlier, in the PDF.`}</Text> : null}
             {model.shots.length === 0 ? <Text style={[styles.small, { color: P.soft }]}>No shots in this range.</Text> : null}
             <Text style={[styles.foot, { color: P.soft }]}>{REPORT_FOOTER}</Text>
 

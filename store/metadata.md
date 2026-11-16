@@ -90,9 +90,9 @@ Data Not Collected. Everything the person logs stays in the app's storage on the
 
 ## Pricing and RevenueCat
 - Subscription group "Shot Log Pro".
-- `shot_pro_weekly`: auto-renewing weekly, $6.99/week, 3-day free trial (introductory offer). RevenueCat package `$rc_weekly`. Preselected and listed first on the onboarding paywall.
+- `shot_pro_weekly`: auto-renewing weekly, $6.99/week, 3-day free trial (introductory offer). RevenueCat package `$rc_weekly`. Preselected and listed first on the onboarding paywall. On every paywall (the in-app ones too) the Weekly row, the legal lines and "No payment now" name the free trial whenever StoreKit says this Apple ID can still get it, because Apple grants it wherever weekly is bought.
 - `shot_pro_yearly`: auto-renewing yearly, $39.99/year, no trial. Package `$rc_annual`. Preselected and listed first on the in-app paywall as "Yearly, best value".
-- `shot_pro_lifetime`: non-consumable, $79.99. Package `$rc_lifetime`, "Lifetime, pay once". After it is bought, if a weekly or yearly subscription is still renewing, the app says so and opens Apple's Manage Subscriptions sheet.
+- `shot_pro_lifetime`: non-consumable, $79.99. Package `$rc_lifetime`, "Lifetime, pay once". After it is bought, if a weekly or yearly subscription is still renewing, the app says so and opens Apple's Manage Subscriptions sheet. Subscribers reach it from the Settings tab, Switch to lifetime ("Pay once, then cancel the subscription"), which opens the paywall with only the Lifetime plan.
 - RevenueCat: entitlement `pro` on all three products, offering `default` with the three packages.
 - Prices and trial text in the app always come from StoreKit; the figures here are the planned store prices only.
 
@@ -101,11 +101,11 @@ Shot Log is a personal log for people who take a medication by injection on a sc
 
 Free use, always: adding one medication, logging shots for it (with the dose and the injection site), the next-due line, one reminder, weight entry, how I feel, editing and adding past entries, and the last 30 days of history. Logging a shot is never behind the paywall.
 
-Pro adds more than one medication, weight trends with the shots marked, side-effect patterns, site history, protein and water counters, the report as a PDF to share or print (free users can open a preview marked SAMPLE that cannot be shared or printed), the CSV export, and history older than 30 days. Products: weekly with a 3-day free trial, yearly, and lifetime.
+Pro adds more than one medication, weight trends with the shots marked, side-effect patterns, site history, protein and water counters, the report as a PDF to share or print (free users can open a preview marked SAMPLE that cannot be shared or printed), the CSV export, and history older than 30 days. Products: weekly with a 3-day free trial (named on every paywall whenever the Apple ID can still get it), yearly, and lifetime. A subscriber can switch to lifetime from the Settings tab (the fifth tab), Switch to lifetime; after that purchase the app offers Apple's Manage Subscriptions sheet to cancel the subscription.
 
 On first launch: three short intro screens, "What are you tracking?" (a label only), and "Add your first medication" (Skip is fine). No paywall during onboarding. After the first shot is saved, the app asks once whether to turn on reminders (local notifications on the due day). Then, if the Apple ID can still get the free trial, two screens explain the trial and the day-before reminder, and the paywall opens. The close button (X, top right) appears after 3 seconds; tap it to keep using the app for free. This paywall shows once; on a later day it may show once more.
 
-To test: add a medication (any name, for example "Test", dose 1 mg, every 7 days), tap Log shot on Today, tap Save. Then History, the plus, A shot, to add a past one. Report, Preview the report.
+Navigation: five tabs at the bottom, Today, History, Insights, Report and Settings. To test: add a medication (any name, for example "Test", dose 1 mg, every 7 days), tap Log shot on Today, tap Save. Then History, the plus, A shot, to add a past one. Report, Preview the report.
 
 ## Screenshot plan (6 shots, 1206x2622, from the real renders)
 `node store/screenshots.js` builds them from docs/design/after (or from a folder of full-colour renders: `node store/screenshots.js store/render/out`) into store/screenshots/. Each is the app's paper, a caption in the app's serif at the top carrying the search words, and the real screen under it with rounded corners. No device frames, no gradients.

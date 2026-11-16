@@ -5,13 +5,14 @@ import { Theme, space, type } from '../theme';
 import Glyph, { GlyphName } from './Glyph';
 import { Tap } from './Kit';
 
-export type Tab = 'today' | 'history' | 'insights' | 'report';
+export type Tab = 'today' | 'history' | 'insights' | 'report' | 'settings';
 
 const TABS: { id: Tab; label: string; glyph: GlyphName }[] = [
   { id: 'today', label: 'Today', glyph: 'ring' },
   { id: 'history', label: 'History', glyph: 'page' },
   { id: 'insights', label: 'Insights', glyph: 'chart' },
   { id: 'report', label: 'Report', glyph: 'report' },
+  { id: 'settings', label: 'Settings', glyph: 'sliders' },
 ];
 
 /** The tab rail: a ruled line on top, ink for the open tab, a short rule under its label. */

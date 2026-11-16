@@ -73,6 +73,13 @@ const SHOTS = [
   ['26-report-preview-pro', { data: full, kv: onboardedKv({ patientName: 'Sam Rivera' }), pro: true }, 'light', async (p) => { await label(p, 'Report').click(); await pause(p); await label(p, 'Preview the report').click(); }],
   ['27-settings', { data: full, kv: onboardedKv() }, 'light', async (p) => { await label(p, 'Settings').click(); }],
   ['32-settings-private', { data: full, kv: onboardedKv() }, 'light', async (p) => { await label(p, 'Settings').click(); await pause(p); await p.mouse.move(196, 500); for (let i = 0; i < 12; i++) { await p.mouse.wheel(0, 120); await pause(p, 60); } }],
+  ['35-paywall-in-app-weekly', { data: full, kv: onboardedKv() }, 'light', async (p) => { await label(p, 'Insights').click(); await pause(p); await text(p, 'See my trends').click(); await pause(p, 900); await labelStarts(p, 'Weekly,').click(); }],
+  ['36-report-preview-shots', { data: full, kv: onboardedKv({ patientName: 'Sam Rivera' }), pro: true }, 'light', async (p) => { await label(p, 'Report').click(); await pause(p); await label(p, 'Preview the report').click(); await pause(p, 700); await scrollText(p, 'Every shot'); await p.mouse.move(196, 500); await p.mouse.wheel(0, 260); }],
+  ['33-settings-subscriber', { data: full, kv: onboardedKv(), pro: true, subs: ['shot_pro_yearly'] }, 'light', async (p) => { await label(p, 'Settings').click(); }],
+  ['34-paywall-lifetime', { data: full, kv: onboardedKv(), pro: true, subs: ['shot_pro_yearly'] }, 'light', async (p) => { await label(p, 'Settings').click(); await pause(p, 700); await labelStarts(p, 'Switch to lifetime').click(); }],
+  ['37-today-320', { data: full, kv: onboardedKv() }, 'light', async () => {}, { width: 320, height: 568 }],
+  ['38-settings-320', { data: full, kv: onboardedKv() }, 'light', async (p) => { await label(p, 'Settings').click(); }, { width: 320, height: 568 }],
+  ['39-plan-changed', { data: full, kv: { ...onboardedKv(), 'plan.seen': JSON.stringify({ product: 'shot_pro_weekly', willRenew: true, periodType: 'TRIAL' }) }, pro: true, subs: ['shot_pro_yearly'], plan: { productIdentifier: 'shot_pro_yearly' } }, 'light', async (p) => { await label(p, 'Settings').click(); }],
   ['28-home-dark', { data: full, kv: onboardedKv() }, 'dark', async () => {}],
   ['29-log-sheet-dark', { data: full, kv: onboardedKv() }, 'dark', async (p) => { await labelStarts(p, 'Log shot').click(); }],
   ['30-weight-chart-dark', { data: full, kv: onboardedKv(), pro: true }, 'dark', async (p) => { await label(p, 'Insights').click(); }],
@@ -97,9 +104,9 @@ const statusBar = (dark) => `
 
 const browser = await chromium.launch();
 let ok = 0;
-for (const [name, scenario, scheme, go] of SHOTS) {
+for (const [name, scenario, scheme, go, size] of SHOTS) {
   if (ONLY && !name.startsWith(ONLY)) continue;
-  const ctx = await browser.newContext({ viewport: { width: 393, height: 852 }, deviceScaleFactor: 3, colorScheme: scheme, timezoneId: 'America/New_York', locale: 'en-US' });
+  const ctx = await browser.newContext({ viewport: { width: size?.width ?? 393, height: size?.height ?? 852 }, deviceScaleFactor: 3, colorScheme: scheme, timezoneId: 'America/New_York', locale: 'en-US' });
   await ctx.addInitScript((sc) => {
     window.__SCENARIO__ = sc;
   }, scenario);
@@ -110,7 +117,7 @@ for (const [name, scenario, scheme, go] of SHOTS) {
     await page.goto(URL, { waitUntil: 'networkidle' });
     await page.waitForTimeout(1200);
     await go(page);
-    await page.waitForTimeout(700);
+    await page.waitForTimeout(name.startsWith('39') ? 200 : 700);
     await page.evaluate(() => document.activeElement && document.activeElement.blur());
     await page.evaluate(statusBar(scheme === 'dark'));
     await page.screenshot({ path: path.join(OUT, `${name}.png`) });
