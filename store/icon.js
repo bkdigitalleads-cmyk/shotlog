@@ -6,7 +6,9 @@ const path = require('path');
 // Shot Log's icon, drawn here so it can be redrawn exactly.
 //   node icon.js options  -> docs/design/icon-options.png (three options, big and at 60 px on light and dark wallpapers)
 //   node icon.js          -> assets/ (icon, splash, Android, favicon) and docs/ (icon-512, apple-touch-icon, og-image)
-// No needle, no pharmacy cross, no drop of liquid: a notebook and a body.
+// The picked icon is the injector pen in store/icon-pen.svg (no needle, no pharmacy cross): the whole
+// tile for the app icon, and the pen alone for the splash (an ink body on the paper, the white body on
+// the dark slate, the coral cap on both). The figure, rotation and page are the earlier options.
 
 const ROOT = path.join(__dirname, '..');
 const SERIF = opentype.loadSync(path.join(ROOT, 'assets/fonts/SourceSerif4_600SemiBold.ttf'));
@@ -14,7 +16,36 @@ const PAPER = '#F4F1EA';
 const INK = '#1D232B';
 const BLUE = '#2747C9';
 const MARGIN = '#DDA89A';
-const CHOSEN = 'figure';
+const CHOSEN = 'pen';
+// The flat tile colour, where a single colour is needed (Android's background colour, flattening).
+const BLUE_TILE = '#2F4BCB';
+
+// The pen, from its own SVG file, so Brian's original artwork can replace it in one step.
+const PEN_SVG = fs.readFileSync(path.join(__dirname, 'icon-pen.svg'), 'utf8');
+const inner = (svgText) => svgText.replace(/^[\s\S]*?<svg[^>]*>/, '').replace(/<\/svg>\s*$/, '').replace(/<!--[\s\S]*?-->/g, '');
+// The tile is every full-size rect (the gradient and the glow over it).
+const TILE_RE = /<rect[^>]*width="1024"[^>]*height="1024"[^>]*\/>/g;
+const BODY_RE = /<(linear|radial)Gradient id="body"[\s\S]*?<\/(linear|radial)Gradient>/;
+const WIN_RE = /<(linear|radial)Gradient id="win"[\s\S]*?<\/(linear|radial)Gradient>/;
+/**
+ * The pen alone (no tile). 'white' keeps the artwork as it is (the dark splash). 'ink' paints the body
+ * in the app's ink and the window in the paper colour #F4F1EA, so the window shows on the ink body
+ * (the paper splash). The soft coral cap stays on both.
+ */
+function penOnly(body) {
+  let s = inner(PEN_SVG).replace(TILE_RE, '');
+  if (body === 'ink') {
+    s = s.replace(BODY_RE, '<linearGradient id="body" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#3A4452"/><stop offset=".55" stop-color="#1D232B"/><stop offset="1" stop-color="#12161B"/></linearGradient>');
+    s = s.replace(WIN_RE, '<linearGradient id="win" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F4F1EA"/><stop offset="1" stop-color="#F4F1EA"/></linearGradient>');
+  }
+  return s;
+}
+
+/** The tile alone (its gradient and glow, no pen): Android's adaptive background layer. */
+function tileOnly() {
+  const defs = (inner(PEN_SVG).match(/<defs>[\s\S]*?<\/defs>/) || [''])[0];
+  return defs + (inner(PEN_SVG).match(TILE_RE) || []).join('');
+}
 
 // The body map's half outline (src/ui/BodyMap.tsx), smoothed the same way.
 const HALF = [
@@ -38,14 +69,16 @@ function figure(cx, k, oy) {
 }
 
 const OPTIONS = {
-  // 1. The figure: the app's own body map line, filled in ink and cropped at the knees, the next site as the blue ring.
+  // 1. The pen (picked): an injector pen seen whole, no needle, white body with a coral cap on solid blue.
+  pen: () => inner(PEN_SVG),
+  // 2. The figure: the app's own body map line, filled in ink and cropped at the knees, the next site as the blue ring.
   figure: (bg = PAPER) => `
     <rect width="1024" height="1024" fill="${bg}"/>
     <line x1="196" y1="0" x2="196" y2="1024" stroke="${MARGIN}" stroke-width="10"/>
     <circle cx="560" cy="214" r="100" fill="${INK}"/>
     <path d="${figure(560, 7.4, -20)}" fill="${INK}"/>
     <circle cx="650" cy="792" r="104" fill="${PAPER}" stroke="${BLUE}" stroke-width="50"/>`,
-  // 2. The rotation: four sites around a circle, three logged in ink, the next one as the blue ring.
+  // 3. The rotation: four sites around a circle, three logged in ink, the next one as the blue ring.
   rotation: (bg = PAPER) => `
     <rect width="1024" height="1024" fill="${bg}"/>
     <line x1="218" y1="0" x2="218" y2="1024" stroke="${MARGIN}" stroke-width="10"/>
@@ -54,7 +87,7 @@ const OPTIONS = {
     <circle cx="310" cy="512" r="86" fill="${INK}" fill-opacity="0.55"/>
     <circle cx="560" cy="762" r="86" fill="${INK}" fill-opacity="0.3"/>
     <circle cx="810" cy="512" r="78" fill="none" stroke="${BLUE}" stroke-width="40"/>`,
-  // 3. The page: a ruled notebook page with a logged line and the next one ringed.
+  // 4. The page: a ruled notebook page with a logged line and the next one ringed.
   page: (bg = PAPER) => `
     <rect width="1024" height="1024" fill="${bg}"/>
     <rect x="232" y="150" width="600" height="724" rx="44" fill="#FFFFFF" stroke="${INK}" stroke-width="22"/>
@@ -83,7 +116,7 @@ function textPath(text, x, y, size, fill, anchor = 'start') {
 
 async function options() {
   const names = Object.keys(OPTIONS);
-  const W = 1500, H = 780;
+  const W = 1980, H = 780;
   const comps = [];
   let bg = `<rect width="${W}" height="${H}" fill="#FFFFFF"/>`;
   names.forEach((n, i) => {
@@ -110,18 +143,19 @@ async function assets() {
   const body = OPTIONS[CHOSEN]();
   const A = (f) => path.join(ROOT, 'assets', f);
   const D = (f) => path.join(ROOT, 'docs', f);
-  await sharp(svg(body)).resize(1024, 1024).flatten({ background: PAPER }).png().toFile(A('icon.png'));
-  // Splash: the figure alone, no square (the splash background is the page colour).
-  const mark = OPTIONS[CHOSEN]('none').replace(/<rect width="1024" height="1024" fill="none"\/>/, '').replace(/<line [^>]*stroke="#DDA89A"[^>]*\/>/, '');
-  await sharp(svg(mark)).resize(512, 512).png().toFile(A('splash-icon.png'));
-  // Dark splash: the same figure in the dark theme's chalk ink and lighter blue, on the slate page.
-  await sharp(svg(mark.replace(new RegExp(INK, 'g'), '#E9E5DC').replace(new RegExp(BLUE, 'g'), '#8EA4FF').replace(new RegExp(PAPER, 'g'), '#16191D'))).resize(512, 512).png().toFile(A('splash-icon-dark.png'));
-  await sharp(svg(mark)).resize(512, 512).png().toFile(A('android-icon-foreground.png'));
-  await sharp(svg(mark.replace(new RegExp(INK, 'g'), '#FFFFFF').replace(new RegExp(BLUE, 'g'), '#FFFFFF'))).resize(512, 512).png().toFile(A('android-icon-monochrome.png'));
-  await sharp({ create: { width: 512, height: 512, channels: 4, background: PAPER } }).png().toFile(A('android-icon-background.png'));
+  await sharp(svg(body)).resize(1024, 1024).flatten({ background: BLUE_TILE }).png().toFile(A('icon.png'));
+  // Splash: the pen alone, sized like the earlier mark; an ink body on the paper, the white body on the dark slate.
+  await sharp(svg(penOnly('ink'))).resize(512, 512).png().toFile(A('splash-icon.png'));
+  await sharp(svg(penOnly('white'))).resize(512, 512).png().toFile(A('splash-icon-dark.png'));
+  // Android adaptive icon: the white pen on the blue, kept inside the safe zone; a white silhouette for themed icons.
+  const safe = (s) => `<g transform="translate(512 512) scale(0.78) translate(-512 -512)">${s}</g>`;
+  await sharp(svg(safe(penOnly('white')))).resize(512, 512).png().toFile(A('android-icon-foreground.png'));
+  const silhouette = penOnly('white').replace(/fill="url\(#[a-z]+\)"/g, 'fill="#FFFFFF"').replace(/fill="#FFC2A8"/g, 'fill="#FFFFFF"').replace(/ filter="url\(#sh\)"/, '');
+  await sharp(svg(safe(silhouette))).resize(512, 512).png().toFile(A('android-icon-monochrome.png'));
+  await sharp(svg(tileOnly())).resize(512, 512).png().toFile(A('android-icon-background.png'));
   await sharp(svg(body)).resize(48, 48).png().toFile(A('favicon.png'));
   await sharp(svg(body)).resize(512, 512).png().toFile(D('icon-512.png'));
-  await sharp(svg(body)).resize(180, 180).png().toFile(D('apple-touch-icon.png'));
+  await sharp(svg(body)).resize(180, 180).flatten({ background: BLUE_TILE }).png().toFile(D('apple-touch-icon.png'));
   // The social card: the icon, the name, and the two lines under it.
   const og = `<rect width="1200" height="630" fill="${PAPER}"/><line x1="120" y1="0" x2="120" y2="630" stroke="${MARGIN}" stroke-width="4"/>
     ${textPath('Shot Log', 520, 270, 96, INK)}

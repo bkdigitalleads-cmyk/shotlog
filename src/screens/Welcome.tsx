@@ -11,6 +11,7 @@ import { TRACKS } from '../labels';
 import type { Track } from '../model';
 import Glyph from '../ui/Glyph';
 import BodyMap from '../ui/BodyMap';
+import AppMark from '../ui/AppMark';
 import { Button, Eyebrow, Leaf, LinkText, Radio, Tap } from '../ui/Kit';
 import { MedDraft, MedForm, blankDraft, saveNewMed } from './Meds';
 
@@ -279,8 +280,8 @@ export function TrialSteps({ onDone }: { onDone: () => void }) {
       line="One notification on this iPhone. Nothing else changes."
       show={
         <View style={[styles.banner, { backgroundColor: theme.surface, borderColor: theme.edge }]}>
-          <View style={[styles.bannerIcon, { backgroundColor: theme.ink }]}>
-            <Glyph name="ring" size={18} color={theme.bg} />
+          <View style={styles.bannerIcon}>
+            <AppMark size={32} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={[type.small, styles.semi, { color: theme.ink }]}>Your free trial ends tomorrow</Text>
@@ -405,7 +406,7 @@ const styles = StyleSheet.create({
   waiting: { height: 50 },
   noPaymentRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.s, minHeight: 32 },
   banner: { flexDirection: 'row', gap: space.m, alignItems: 'flex-start', borderWidth: 1, borderRadius: radius.leaf, padding: space.m },
-  bannerIcon: { width: 32, height: 32, borderRadius: radius.tab, alignItems: 'center', justifyContent: 'center' },
+  bannerIcon: { width: 32, height: 32 },
   timeRow: { flexDirection: 'row', alignItems: 'center', gap: space.m, paddingVertical: space.s },
   paper: { borderWidth: 1, borderRadius: radius.tab / 2, padding: space.l, transform: [{ rotate: '-1.5deg' }] },
   paperH: { fontFamily: fonts.serif, fontSize: 18, color: PAPER_INK },

@@ -44,13 +44,26 @@ Looked at every render; fixed from that: "Due Thursday" wrapped beside the mini 
 
 ## Icon
 
-Three options in `icon-options.png`, each big and at 60 and 40 px on a light and a dark wallpaper, drawn by `store/icon.js` (`node icon.js options`; `node icon.js` writes `assets/` and the website images).
+The icon is the injector pen (picked Nov 15, 2026, replacing the figure). Four options are in `icon-options.png`, each big and at 60 and 40 px on a light and a dark wallpaper, drawn by `store/icon.js` (`node icon.js options`; `node icon.js` writes `assets/` and the website images). The pen itself lives in `store/icon-pen.svg`, so its artwork can be replaced in one step and everything redrawn from it.
 
-1. figure (picked): the app's own body map figure, filled in ink and cropped at the thighs on the paper, with the margin rule, and the next site as a bold blue ring with paper inside it. Why: it says what the app is for (where the next shot goes) without a needle, a drop or a cross; it is the only one of the three that reads as this app and not as a notes or habit app; at 60 px it is two shapes, a dark figure and a blue ring, so it holds on both wallpapers; and it uses the blue the way the app does, for the next thing to do. The ring breaks the figure enough that it does not read as a generic profile avatar.
-2. rotation: four sites around a dotted circle, three logged in ink of fading strength, the next as the blue ring. Clear at 60 px and calm, but abstract: it reads as a loading spinner or a dial.
-3. page: a ruled notebook page with the margin line, two logged lines and the next one ringed. True to the concept, but at 60 px it is any notes app.
+1. pen (picked): an injector pen seen whole, with no needle, turned 45 degrees. It has a white body with a blue dose window and a soft coral cap, tip, neck and dose button, on a blue tile. Why:
+   - It says injection at a glance, without a needle, a syringe or a pharmacy cross.
+   - A solid blue tile stands out at small sizes and on both wallpapers; at 60 px it is still a white-and-coral pen on blue.
+   - The coral cap gives it a second colour of its own, so it does not look like another blue health app.
+2. figure (the 1.0.0 build 1 pick): the app's body map figure in ink on paper, the next site as a blue ring. Calm and true to the app, but at 60 px it reads as a person, close to a profile avatar.
+3. rotation: four sites around a dotted circle, the next as the blue ring. Abstract; reads as a spinner or a dial.
+4. page: a ruled notebook page with the next line ringed. True to the concept, but it is any notes app at 60 px.
 
-The splash shows the figure alone on the page colour (light and dark).
+The splash shows the pen alone, without the tile, at the size of the earlier mark, with the soft coral cap on both: on the paper an ink body with a paper-coloured window (#F4F1EA) so the window shows (`assets/splash-icon.png`), and on the dark slate the white body with its blue window (`assets/splash-icon-dark.png`). Android: the gradient tile as the background layer (flat #2F4BCB as the background colour), the white pen inside the safe zone, and a white silhouette for themed icons. Inside the app the icon appears once, in the trial's day-before notification on onboarding (`src/ui/AppMark.tsx`, re-rendered as `after/13-trial-reminder.png`).
+
+The pen's shapes and colours are Brian's (Nov 15, 2026):
+- the tile: a gradient from #4263EE at the top left to #1C34A6 at the bottom right, with a white glow (opacity 0.13 fading to 0) centred 22% across and 16% down, radius 75%
+- the body: #FFFFFF to 0.55, then #D5DDFF across the pen's width
+- the cap, tip, neck and dose button: #FFC2A8 to 0.5, then #F39A7A
+- the window: #1B2F97 to #27409F, top to bottom, with the #FFC2A8 level and a white highlight at 0.55
+- a drop shadow on the pen: dx 26, dy 44, blur 24, #0B1650 at 0.34
+
+In the app (`AppMark`, `ICON_COLORS`) the tile is flat #2F4BCB at that small size, and there is no shadow.
 
 ## The report
 
@@ -66,4 +79,4 @@ The splash shows the figure alone on the page colour (light and dark).
 - [x] VoiceOver labels on every control; Dynamic Type caps on display text. Designed for, not yet checked on a device.
 - [x] Copy voice grep-checked; no brand drug names.
 - [x] `after/*.png` for Home (empty, with history, stack), the log sheet, the body map, medications, the weight chart, patterns, site history, the report preview (free and Pro), both paywalls, settings, onboarding, the first-shot moment, history, weight, how I feel, and three dark screens.
-- [x] Icon options drawn; figure picked and written to `assets/` and the website images.
+- [x] Icon options drawn; the pen picked (Nov 15) and written to `assets/`, both splash images, the Android layers and the website images.

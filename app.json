@@ -12,7 +12,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.bwk.shotlog",
-      "buildNumber": "1",
+      "buildNumber": "2",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "LSApplicationCategoryType": "public.app-category.healthcare-fitness"
@@ -21,7 +21,7 @@
     "android": {
       "package": "com.bwk.shotlog",
       "adaptiveIcon": {
-        "backgroundColor": "#F4F1EA",
+        "backgroundColor": "#2F4BCB",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
