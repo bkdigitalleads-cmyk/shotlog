@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
@@ -10,9 +10,6 @@ import { onSnoozeTapped, snooze } from './src/reminder';
 import { maybeRequestReview, recordInstallDay, setReviewGuard } from './src/reviews';
 import { autoPaywallAllowed, firstFlowStep, secondShotMet } from './src/flow';
 import { FIRST_FLOW_KEY, SECOND_CHANCE_KEY, takeSecondChance } from './src/firstRun';
-import { restorePurchases, isBillingAvailable } from './src/purchases';
-import { cancelTrialReminder } from './src/reminder';
-import { openManageSubscriptions } from './src/plans';
 import { addDays, dayKey, timeLabel } from './src/days';
 import type { FeelingEntry, Shot, Weight } from './src/model';
 import Today from './src/screens/Today';
@@ -24,6 +21,7 @@ import { FeelTray, WeightTray, EntryRequest } from './src/screens/Entries';
 import MedsScreen from './src/screens/Meds';
 import SettingsScreen, { resetFirstRun } from './src/screens/Settings';
 import ReminderAsk from './src/screens/ReminderAsk';
+import ProSection from './src/screens/ProSection';
 import PaywallModal from './src/screens/Paywall';
 import Welcome, { FirstMedStep, TrackStep, TrialSteps, trialOffer } from './src/screens/Welcome';
 import TabRail, { Tab } from './src/ui/TabRail';
@@ -170,16 +168,6 @@ function Shell() {
     setOver('meds');
   };
 
-  const onRestore = async () => {
-    if (!isBillingAvailable()) return Alert.alert('The App Store is not answering', 'Try again in a minute.');
-    const res = await restorePurchases();
-    if (res.ok) {
-      cancelTrialReminder();
-      setIsPro(res.isPro);
-      Alert.alert(res.isPro ? 'Pro is back on' : 'Nothing to restore', res.isPro ? 'Everything is open again.' : 'This Apple ID has no Shot Log Pro purchase.');
-    } else Alert.alert('Restore did not work', res.error ?? 'Try once more.');
-  };
-
   let body: React.ReactNode;
   if (over === 'meds') body = <MedsScreen onBack={() => setOver(overFrom === 'settings' ? 'settings' : null)} />;
   else if (over === 'settings')
@@ -188,23 +176,7 @@ function Shell() {
         onBack={() => setOver(null)}
         onMeds={() => openMeds('settings')}
         slots={{
-          pro: (
-            <View>
-              <Eyebrow theme={theme}>Shot Log Pro</Eyebrow>
-              <Rows theme={theme}>
-                <Row
-                  theme={theme}
-                  glyph="ring"
-                  label={isPro ? 'Pro is on' : 'Shot Log Pro'}
-                  sub={isPro ? 'Thank you. Everything is open.' : 'A stack, trends, the report and your whole history'}
-                  onPress={isPro ? undefined : () => showPaywall('pro')}
-                />
-                {isPro ? <Row theme={theme} label="Manage subscription" onPress={openManageSubscriptions} /> : null}
-                <Row theme={theme} label="Restore purchases" onPress={onRestore} />
-              </Rows>
-              <Text style={[type.small, { color: theme.inkSoft, marginTop: space.s }]}>Logging your shots is always free.</Text>
-            </View>
-          ),
+          pro: <ProSection />,
           testing: (open) =>
             open ? (
               <View>

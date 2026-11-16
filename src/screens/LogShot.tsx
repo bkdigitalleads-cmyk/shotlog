@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useTheme, space, tabular, type } from '../theme';
 import { useApp } from '../state';
-import { addShot, deleteShot, updateShot } from '../db';
+import { addShot, deleteShot, moveMedStartBack, updateShot } from '../db';
 import { dayKey, timeLabel, whenShort } from '../days';
 import { doseOn, medDueDay } from '../schedule';
 import { nextSite, rotationLine, siteLabel } from '../sites';
@@ -133,6 +133,8 @@ export default function LogShot({ request, onClose }: { request: LogShotRequest 
         const id = await addShot(fields);
         saved = { id, createdAt: Date.now(), ...fields };
       }
+      // A shot from before the medication's start moves the start (and its first dose) back to that day.
+      if (fields.medId != null) await moveMedStartBack(fields.medId, fields.at);
       savedHaptic();
       await refresh();
       say(editing ? 'Changes saved.' : `Saved, ${whenShort(at, Date.now())}.`);

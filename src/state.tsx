@@ -5,8 +5,9 @@ import { getFeelings, getIntake, getMeds, getShots, getWeights, kvAll, kvGet, kv
 import { syncShotReminders, syncTrialReminder } from './reminder';
 import { hasSandboxPro } from './testing';
 import { activeMeds, type ProFeature } from './gates';
-import { DEFAULT_REMINDER_MINUTES } from './schedule';
+import { DEFAULT_REMINDER_MINUTES, effectiveMed } from './schedule';
 import type { FeelingEntry, Intake, Med, Shot, Track, Weight, WeightUnit } from './model';
+import type { PlanType } from './offer';
 
 export interface Settings {
   /** "What are you tracking?" Words only. */
@@ -74,13 +75,15 @@ export function parseSettings(rows: Record<string, string>): Settings {
   };
 }
 
-/** Why the in-app paywall opened; it changes one line on it. 'pro' is the general one. */
-export type PaywallReason = ProFeature | 'pro';
+/** Why the in-app paywall opened; it changes one line on it. 'pro' is the general one; 'lifetime' is Switch to lifetime. */
+export type PaywallReason = ProFeature | 'pro' | 'lifetime';
 
 export interface PaywallRequest {
   reason: PaywallReason;
   /** The onboarding paywall: weekly with the trial preselected, X after 3 seconds. */
   onboarding: boolean;
+  /** Only this plan (Switch to lifetime shows only Lifetime). */
+  only?: PlanType;
 }
 
 interface AppState {
@@ -94,7 +97,7 @@ interface AppState {
   setActFree: (v: boolean) => Promise<void>;
   paywall: PaywallRequest | null;
   /** Opens the paywall. A tap on something Pro always opens it. */
-  showPaywall: (reason: PaywallReason, onboarding?: boolean) => void;
+  showPaywall: (reason: PaywallReason, onboarding?: boolean, only?: PlanType) => void;
   hidePaywall: () => void;
   /** True once any paywall has shown in this launch (the app never opens a second one on its own). */
   paywallThisLaunch: boolean;
@@ -125,7 +128,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [paywall, setPaywall] = useState<PaywallRequest | null>(null);
   const [paywallThisLaunch, setPaywallThisLaunch] = useState(false);
   const [ready, setReady] = useState(false);
-  const [meds, setMeds] = useState<Med[]>([]);
+  const [storedMeds, setMeds] = useState<Med[]>([]);
   const [shots, setShots] = useState<Shot[]>([]);
   const [weights, setWeights] = useState<Weight[]>([]);
   const [feelings, setFeelings] = useState<FeelingEntry[]>([]);
@@ -224,6 +227,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   );
 
   const isPro = storePro && !(testBuild && actFree);
+  // Each medication as it really started: never later than its earliest logged shot (also for data saved before 1.0.0 build 3).
+  const meds = useMemo(() => storedMeds.map((m) => effectiveMed(m, shots)), [storedMeds, shots]);
   const active = useMemo(() => activeMeds(meds, isPro), [meds, isPro]);
 
   // Reminders follow the schedule: rescheduled whenever shots, medications, Pro or the settings change.
@@ -232,9 +237,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     syncShotReminders(active, shots, settings).catch(() => {});
   }, [ready, active, shots, settings]);
 
-  const showPaywall = useCallback((reason: PaywallReason, onboarding = false) => {
+  const showPaywall = useCallback((reason: PaywallReason, onboarding = false, only?: PlanType) => {
     setPaywallThisLaunch(true);
-    setPaywall({ reason, onboarding });
+    setPaywall({ reason, onboarding, only });
   }, []);
 
   const value = useMemo<AppState>(

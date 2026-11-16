@@ -8,7 +8,7 @@
 import { Alert } from 'react-native';
 import Purchases from 'react-native-purchases';
 import { isBillingAvailable } from './purchases';
-import { PRODUCTS, subscriptionsToCancel } from './offer';
+import { PRODUCTS, proRows, subscriptionsToCancel } from './offer';
 
 /** Product ids of subscriptions still renewing on this Apple ID, other than lifetime. Empty when unknown. */
 export async function renewingSubscriptions(): Promise<string[]> {
@@ -20,6 +20,39 @@ export async function renewingSubscriptions(): Promise<string[]> {
   } catch {
     return [];
   }
+}
+
+export interface PlanState {
+  ownsLifetime: boolean;
+  /** Active subscription products (renewing, or cancelled but still running), lifetime left out. */
+  activeSubscriptions: string[];
+  /** The ones that will renew. */
+  renewing: string[];
+}
+
+/** How Pro is held on this Apple ID, or null when RevenueCat cannot answer (offline, not configured). */
+export async function getPlanState(): Promise<PlanState | null> {
+  if (!isBillingAvailable()) return null;
+  try {
+    const info = await Purchases.getCustomerInfo();
+    const byId = info.subscriptionsByProductIdentifier ?? {};
+    const active = (info.activeSubscriptions ?? []).filter((id) => id !== PRODUCTS.lifetime);
+    const ownsLifetime =
+      (info.allPurchasedProductIdentifiers ?? []).includes(PRODUCTS.lifetime) ||
+      (info.nonSubscriptionTransactions ?? []).some((t) => t.productIdentifier === PRODUCTS.lifetime);
+    return { ownsLifetime, activeSubscriptions: active, renewing: subscriptionsToCancel(active, (id) => byId[id]?.willRenew !== false) };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The Pro rows Settings shows (src/offer.ts proRows). When RevenueCat cannot
+ * answer, Pro users keep Manage subscription and see no Switch to lifetime.
+ */
+export function rowsFor(isPro: boolean, plan: PlanState | null): { switchToLifetime: boolean; manageSubscription: boolean } {
+  if (!plan) return { switchToLifetime: false, manageSubscription: isPro };
+  return proRows({ isPro, ...plan });
 }
 
 /** Apple's own sheet to cancel or change a subscription. Falls back to nothing when it cannot open. */

@@ -90,7 +90,10 @@ export function nextDueDay(schedule: Schedule, startDay: string, lastShotDay: st
 /** The next due day for a medication, given every logged shot. */
 export function medDueDay(med: Pick<Med, 'id' | 'schedule' | 'startDay'>, shots: Shot[]): string | null {
   const last = lastShotFor(med.id, shots);
-  return nextDueDay(med.schedule, med.startDay, last ? dayKey(last.at) : null);
+  // The start is never later than the earliest logged shot (see effectiveMed).
+  let start = med.startDay;
+  for (const s of shots) if (s.medId === med.id && dayKey(s.at) < start) start = dayKey(s.at);
+  return nextDueDay(med.schedule, start, last ? dayKey(last.at) : null);
 }
 
 /**
@@ -143,3 +146,38 @@ export function reminderAt(due: string | null, minutes: number, now: number): nu
 
 /** Snooze: one hour from the moment it is asked for. */
 export const SNOOZE_MS = 60 * 60 * 1000;
+
+/**
+ * A medication as it really started: the earlier of its start day and its
+ * earliest logged shot. A shot added for a day before the start (from
+ * Earlier in the log sheet, or from History) moves the start back to that
+ * day, and when the first dose entry began on the old start, it moves back
+ * with it. Pure and idempotent, so it is applied wherever medications are
+ * read, and existing data reads correctly without a migration.
+ */
+export function effectiveMed<M extends Pick<Med, 'id' | 'startDay' | 'doses'>>(med: M, shots: Pick<Shot, 'medId' | 'at'>[]): M {
+  let earliest: string | null = null;
+  for (const s of shots) {
+    if (s.medId !== med.id) continue;
+    const d = dayKey(s.at);
+    if (earliest == null || d < earliest) earliest = d;
+  }
+  const move = startMoveFor(med, earliest);
+  if (!move) return med;
+  return {
+    ...med,
+    startDay: move.startDay,
+    doses: med.doses.map((d) => (d.id === move.doseId ? { ...d, fromDay: move.startDay } : d)),
+  };
+}
+
+/**
+ * What saving a shot on `shotDay` changes: null when the day is on or after
+ * the start, else the new start day and the dose entry to move with it (the
+ * first one, when it began on the old start day; else null).
+ */
+export function startMoveFor(med: Pick<Med, 'startDay' | 'doses'>, shotDay: string | null): { startDay: string; doseId: number | null } | null {
+  if (!shotDay || shotDay >= med.startDay) return null;
+  const first = [...med.doses].sort((a, b) => (a.fromDay < b.fromDay ? -1 : a.fromDay > b.fromDay ? 1 : a.id - b.id))[0];
+  return { startDay: shotDay, doseId: first && first.fromDay === med.startDay ? first.id : null };
+}

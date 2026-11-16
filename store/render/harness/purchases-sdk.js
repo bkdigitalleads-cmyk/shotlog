@@ -8,7 +8,18 @@ const Purchases = {
   setLogLevel() {},
   configure() {},
   async getCustomerInfo() {
-    return { entitlements: { active: pro() ? { pro: { periodType: 'NORMAL', willRenew: true, isSandbox: false } } : {} }, activeSubscriptions: [], subscriptionsByProductIdentifier: {} };
+    // scenario.subs: active subscription products (all renewing); scenario.lifetime: lifetime owned.
+    const sc = window.__SCENARIO__ || {};
+    const subs = sc.subs || [];
+    const byId = Object.fromEntries(subs.map((id) => [id, { willRenew: true, isActive: true }]));
+    const owned = [...subs, ...(sc.lifetime ? ['shot_pro_lifetime'] : [])];
+    return {
+      entitlements: { active: pro() ? { pro: { periodType: 'NORMAL', willRenew: true, isSandbox: false } } : {} },
+      activeSubscriptions: subs,
+      subscriptionsByProductIdentifier: byId,
+      allPurchasedProductIdentifiers: owned,
+      nonSubscriptionTransactions: sc.lifetime ? [{ productIdentifier: 'shot_pro_lifetime' }] : [],
+    };
   },
   async getOfferings() {
     return { current: { identifier: 'default', availablePackages: [weekly, annual, lifetime], weekly, annual, lifetime } };

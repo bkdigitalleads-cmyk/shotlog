@@ -101,6 +101,46 @@ test('reminders: the due day at the chosen time, nothing for a moment already pa
   assert.equal(S.reminderAt(null, 540, NOW), null);
 });
 
+test('start day: a shot before the start moves the start and the first dose back; existing data reads right', () => {
+  // Brian's case: added today (Nov 16) at 1 mg, then a past shot for Nov 9 from History.
+  const med = { id: 1, schedule: { kind: 'interval', everyDays: 7 }, startDay: '2026-11-16', doses: [change('2026-11-16', '1')] };
+  const shots = [shot('2026-11-09', { amount: '1' })];
+  const m = S.effectiveMed(med, shots);
+  assert.equal(m.startDay, '2026-11-09');
+  assert.equal(m.doses[0].fromDay, '2026-11-09');
+  assert.deepEqual(S.doseOn(m.doses, '2026-11-09'), { amount: '1', unit: 'mg' });
+  // The stored medication is not changed, and applying it twice changes nothing more.
+  assert.equal(med.startDay, '2026-11-16');
+  assert.deepEqual(S.effectiveMed(m, shots), m);
+  // No earlier shot: the same object back.
+  assert.equal(S.effectiveMed(med, [shot('2026-11-16')]), med);
+  // Another medication's shot does not count.
+  assert.equal(S.effectiveMed(med, [shot('2026-11-01', { medId: 2 })]).startDay, '2026-11-16');
+  // A first dose that began after the start (a later dose change only) stays where it is.
+  const later = { ...med, startDay: '2026-11-02', doses: [change('2026-11-10', '0.5')] };
+  assert.equal(S.effectiveMed(later, [shot('2026-10-30')]).doses[0].fromDay, '2026-11-10');
+  // With several doses, only the first one, and only when it began on the old start.
+  const two = { ...med, startDay: '2026-11-02', doses: [change('2026-11-02', '0.25'), change('2026-11-09', '0.5')] };
+  assert.deepEqual(S.effectiveMed(two, [shot('2026-10-26')]).doses.map((d) => d.fromDay), ['2026-10-26', '2026-11-09']);
+  // What saving a shot changes.
+  assert.equal(S.startMoveFor(med, '2026-11-16'), null);
+  assert.equal(S.startMoveFor(med, '2026-11-20'), null);
+  assert.deepEqual(S.startMoveFor(med, '2026-11-09'), { startDay: '2026-11-09', doseId: med.doses[0].id });
+  assert.deepEqual(S.startMoveFor(later, '2026-10-30'), { startDay: '2026-10-30', doseId: null });
+  // The next due day ignores a start later than the shots.
+  assert.equal(S.medDueDay({ id: 1, schedule: { kind: 'weekdays', days: [0] }, startDay: '2026-11-23' }, [shot('2026-11-09')]), '2026-11-16');
+});
+
+test('report: first shot is the earlier of the start day and the earliest logged shot, and the first dose follows', () => {
+  const med = { id: 1, name: 'Semaglutide', schedule: { kind: 'interval', everyDays: 7 }, startDay: '2026-11-16', doses: [change('2026-11-16', '1')], remind: true, position: 0, createdAt: 0 };
+  const r = R.buildReport({ meds: [med], shots: [shot('2026-11-09', { amount: '1' })], weights: [], feelings: [], unit: 'lb', rangeDays: 30, now: at('2026-11-16', 10), patient: '' });
+  assert.equal(r.meds[0].start, 'Nov 9, 2026');
+  assert.deepEqual(r.meds[0].doses, [{ from: 'Nov 9, 2026', dose: '1 mg' }]);
+  assert.deepEqual(r.shots.map((x) => x.date), ['Nov 9, 2026']);
+  assert.ok(R.reportHtml(r).includes('first shot Nov 9, 2026'));
+  assert.ok(R.reportHtml(r).includes('1 mg from Nov 9, 2026'));
+});
+
 // ---------- sites ----------
 
 test('site rotation: follows the order the person uses', () => {
@@ -162,9 +202,20 @@ test('plans: order, preselection, titles and the trial only on the onboarding we
   assert.equal(O.planTitle('ANNUAL', true), 'Yearly');
   assert.equal(O.planTitle('LIFETIME', false), 'Lifetime, pay once');
   assert.equal(O.planTypeOf('MONTHLY'), null);
-  assert.equal(O.showsTrial('WEEKLY', true, '3 days free'), '3 days free');
-  assert.equal(O.showsTrial('WEEKLY', false, '3 days free'), null);
-  assert.equal(O.showsTrial('ANNUAL', true, '3 days free'), null);
+  // The trial shows on the weekly plan of every paywall whenever StoreKit says this Apple ID can get it (Brian's build 2 test:
+  // the in-app paywall said only $6.99 a week, and Apple gave the 3-day trial).
+  assert.equal(O.showsTrial('WEEKLY', '3 days free'), '3 days free');
+  assert.equal(O.showsTrial('WEEKLY', null), null);
+  assert.equal(O.showsTrial('ANNUAL', '3 days free'), null);
+  assert.equal(O.showsTrial('LIFETIME', '3 days free'), null);
+  // Yearly stays preselected (and first) on the in-app paywall, weekly on the onboarding one.
+  assert.equal(O.preselect(['WEEKLY', 'ANNUAL', 'LIFETIME'], false), 'ANNUAL');
+  assert.equal(O.preselect(['WEEKLY', 'ANNUAL', 'LIFETIME'], true), 'WEEKLY');
+  // Switch to lifetime: only the Lifetime plan, preselected.
+  assert.deepEqual(O.plansShown(['WEEKLY', 'ANNUAL', 'LIFETIME'], false), ['ANNUAL', 'WEEKLY', 'LIFETIME']);
+  assert.deepEqual(O.plansShown(['WEEKLY', 'ANNUAL', 'LIFETIME'], false, 'LIFETIME'), ['LIFETIME']);
+  assert.deepEqual(O.plansShown(['WEEKLY', 'ANNUAL'], false, 'LIFETIME'), []);
+  assert.equal(O.preselect(['WEEKLY', 'ANNUAL', 'LIFETIME'], false, 'LIFETIME'), 'LIFETIME');
   const intro = { price: 0, periodNumberOfUnits: 3, periodUnit: 'DAY' };
   assert.equal(O.trialLength(intro), '3 days');
   assert.equal(O.trialLabelFrom(intro, true), '3 days free');
@@ -184,6 +235,24 @@ test('lifetime with an active subscription: name the renewing ones so the app ca
   // One already cancelled ends on its own; nothing to say.
   assert.deepEqual(O.subscriptionsToCancel(['shot_pro_yearly_cancelled'], renewing), []);
   assert.deepEqual(O.subscriptionsToCancel(['shot_pro_yearly', 'shot_pro_weekly'], () => true), ['shot_pro_yearly', 'shot_pro_weekly']);
+});
+
+test('Settings Pro rows: Switch to lifetime for subscribers without lifetime; Manage subscription unless lifetime and nothing renews', () => {
+  const rows = (o) => O.proRows({ isPro: true, ownsLifetime: false, activeSubscriptions: [], renewing: [], ...o });
+  // Free: neither.
+  assert.deepEqual(rows({ isPro: false }), { switchToLifetime: false, manageSubscription: false });
+  // Pro through a renewing weekly or yearly subscription: both.
+  assert.deepEqual(rows({ activeSubscriptions: ['shot_pro_weekly'], renewing: ['shot_pro_weekly'] }), { switchToLifetime: true, manageSubscription: true });
+  assert.deepEqual(rows({ activeSubscriptions: ['shot_pro_yearly'], renewing: ['shot_pro_yearly'] }), { switchToLifetime: true, manageSubscription: true });
+  // A cancelled subscription still running: Pro still comes from it, so Switch to lifetime shows.
+  assert.deepEqual(rows({ activeSubscriptions: ['shot_pro_yearly'], renewing: [] }), { switchToLifetime: true, manageSubscription: true });
+  // Lifetime and nothing renewing: nothing to manage, nothing to switch.
+  assert.deepEqual(rows({ ownsLifetime: true }), { switchToLifetime: false, manageSubscription: false });
+  assert.deepEqual(rows({ ownsLifetime: true, activeSubscriptions: ['shot_pro_weekly'], renewing: [] }), { switchToLifetime: false, manageSubscription: false });
+  // Lifetime with a subscription still renewing: Manage subscription, so it can be cancelled.
+  assert.deepEqual(rows({ ownsLifetime: true, activeSubscriptions: ['shot_pro_weekly'], renewing: ['shot_pro_weekly'] }), { switchToLifetime: false, manageSubscription: true });
+  // The lifetime product never counts as a subscription.
+  assert.deepEqual(rows({ activeSubscriptions: ['shot_pro_lifetime'] }), { switchToLifetime: false, manageSubscription: true });
 });
 
 // ---------- first run and paywall timing ----------
@@ -329,6 +398,16 @@ test('report: shots in range oldest first, dose history with dates, weight chang
   assert.ok(html.includes('<svg'));
   assert.ok(!html.includes('SAMPLE'));
   assert.ok(R.reportHtml(r, { sample: true }).includes('SAMPLE'));
+  // Every shot follows on the same page when it fits: no forced page break; the heading is kept with its first rows; oldest first.
+  assert.ok(!html.includes('class="break"') && !/page-break-before:\s*always/.test(html));
+  assert.ok(html.includes('<div class="keep"><h2>Every shot</h2><table class="shots">'));
+  assert.ok(html.indexOf('Nov 5, 2026') < html.indexOf('Nov 12, 2026'));
+  const rows = Array.from({ length: 5 }, (_, i) => `<tr><td>row${i}</td></tr>`);
+  const section = R.everyShot(rows, false);
+  assert.equal((section.match(/<table class="shots">/g) || []).length, 2);
+  assert.ok(section.indexOf('row2') < section.indexOf('</div>') && section.indexOf('row3') > section.indexOf('</div>'));
+  assert.equal((R.everyShot(rows.slice(0, 2), true).match(/<table/g) || []).length, 1);
+  assert.ok(R.everyShot([], false).includes('No shots in this range.'));
   assert.ok(!/[!\u2014]/.test(html.replace(/<!doctype html>/i, '')), 'no exclamation marks or em dashes');
   // An empty range still prints.
   const empty = R.buildReport({ meds: [], shots: [], weights: [], feelings: [], unit: 'kg', rangeDays: 90, now: NOW, patient: '' });
@@ -363,7 +442,7 @@ test('identity: app.json and eas.json as the brief sets them, the push plugin la
   assert.equal(app.slug, 'shotlog');
   assert.equal(app.version, '1.0.0');
   assert.equal(app.ios.bundleIdentifier, 'com.bwk.shotlog');
-  assert.equal(app.ios.buildNumber, '2');
+  assert.equal(app.ios.buildNumber, '3');
   assert.equal(app.android.adaptiveIcon.backgroundColor, '#2F4BCB');
   assert.equal(app.owner, 'bkdeveloper123');
   assert.equal(app.extra.eas.projectId, '0cdea6c0-e329-4f94-979a-5c9d8fdffc37');

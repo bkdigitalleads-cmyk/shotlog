@@ -9,6 +9,8 @@
 import * as SQLite from 'expo-sqlite';
 import type { DoseChange, DoseUnit, Feeling, FeelingEntry, Intake, Level, Med, Schedule, Shot, Site, Weight, WeightUnit } from './model';
 import { isSite } from './sites';
+import { dayKey } from './days';
+import { startMoveFor } from './schedule';
 
 const SCHEMA_VERSION = 1;
 
@@ -254,6 +256,24 @@ export async function deleteMed(id: number): Promise<void> {
     await db.runAsync('UPDATE shots SET med_id = NULL WHERE med_id = ?', [id]);
     await db.runAsync('DELETE FROM dose_changes WHERE med_id = ?', [id]);
     await db.runAsync('DELETE FROM meds WHERE id = ?', [id]);
+  });
+}
+
+/**
+ * After a shot is saved: when it is on a day before its medication's start,
+ * the start moves back to that day, with the first dose entry when it began
+ * on the old start (src/schedule.ts startMoveFor). Nothing changes otherwise.
+ */
+export async function moveMedStartBack(medId: number, shotAt: number): Promise<void> {
+  const db = await getDb();
+  const med = await db.getFirstAsync<{ start_day: string }>('SELECT start_day FROM meds WHERE id = ?', [medId]);
+  if (!med) return;
+  const doses = await db.getAllAsync<{ id: number; from_day: string }>('SELECT id, from_day FROM dose_changes WHERE med_id = ?', [medId]);
+  const move = startMoveFor({ startDay: med.start_day, doses: doses.map((d) => ({ id: d.id, medId, fromDay: d.from_day, amount: '', unit: 'mg' as const })) }, dayKey(shotAt));
+  if (!move) return;
+  await db.withTransactionAsync(async () => {
+    await db.runAsync('UPDATE meds SET start_day = ?, updated_at = ? WHERE id = ?', [move.startDay, Date.now(), medId]);
+    if (move.doseId != null) await db.runAsync('UPDATE dose_changes SET from_day = ? WHERE id = ?', [move.startDay, move.doseId]);
   });
 }
 
