@@ -82,7 +82,7 @@ Plain, short, kind. No "Unlock", "Premium", "Seamless", "Effortless", "Welcome",
 
 ## 8. MEDICAL AND REVIEW SAFETY
 
-The App Review note and an About line say the app is a personal log that does not diagnose, treat, calculate doses or give medical advice, and that the person should follow their prescriber. No estimated drug-level curves in 1.0.0 (note for later, with care). No HealthKit in 1.0.0 (note Apple Health weight sync for 1.0.1). Data never leaves the device; no account; privacy label Data Not Collected.
+The App Review note and an About line say the app is a personal log that does not diagnose, treat, calculate doses or give medical advice, and that the person should follow their prescriber. No estimated drug-level curves in 1.0.0 (note for later, with care). No HealthKit in 1.0.0 (note Apple Health weight sync for 1.0.1). Data never leaves the device; no account; privacy label Purchases (purchase history), used for App Functionality, not linked to identity, not used for tracking, because RevenueCat stores the purchase history (updated Nov 16, 2026; it was Data Not Collected).
 
 ## 9. store/metadata.md
 
